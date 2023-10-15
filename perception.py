@@ -9,4 +9,4 @@ class Vision(nn.Module):
 
 
     def forward(self, x):
-        pass
+        return None
