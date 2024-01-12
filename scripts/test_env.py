@@ -1,19 +1,16 @@
-import gym
-import minerl
+import minedojo
 
 # Uncomment to see more logs of the MineRL launch
 #import coloredlogs
 #import logging
 #coloredlogs.install(logging.DEBUG)
 
-env = gym.make("MineRLBasaltBuildVillageHouse-v0")
-obs = env.reset()
+env = minedojo.make(task_id='open-ended', image_size=(160,256))
+env.reset()
 
 done = False
 while not done:
-    ac = env.action_space.noop()
-    # Spin around to see what is around us
-    ac["camera"] = [0, 3]
+    ac = env.action_space.no_op()
     obs, reward, done, info = env.step(ac)
     env.render()
 env.close()

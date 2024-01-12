@@ -1,7 +1,7 @@
-from tinygrad import Tensor, nn
+import torch.nn as nn
 
 
-class PerceptionModule:
+class PerceptionModule(nn.Module):
     '''
     Perception module for the agent. This should handle all of the perceptual input that an agent may receive.
     This includes (but may not be limited to):
@@ -16,9 +16,10 @@ class PerceptionModule:
     may finish before others.
     '''
     def __init__(self):
-        pass
+        super().__init__()
 
     def forward(self, x_img, x_audio, x_mem):
         '''
         Forward pass over the network. This method determines how we 
         '''
+        pass
