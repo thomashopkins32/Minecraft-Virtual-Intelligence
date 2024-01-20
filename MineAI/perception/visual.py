@@ -2,6 +2,8 @@ import torch
 import torch.nn as nn
 from torchvision.transforms.functional import center_crop
 
+from utils import compute_kernel_size, compute_stride
+
 
 class VisualPerception(nn.Module):
     """
@@ -18,16 +20,15 @@ class VisualPerception(nn.Module):
         - The region of interest shall be determined by the most recent output of the actor module
     """
 
-    def __init__(self, roi_width=10, roi_height=10):
+    def __init__(self, output_shape=(32, 8, 8), roi_shape=(16, 16)):
         super().__init__()
         # Set region of interest height and width
-        self.roi_width = roi_width
-        self.roi_height = roi_height
+        self.roi_shape = roi_shape
 
         # Set up sub-modules
-        self.foveated_perception = FoveatedPerception()
-        self.peripheral_perception = PeripheralPerception()
-        self.combiner = VisualAttention()
+        self.foveated_perception = FoveatedPerception(output_shape)
+        self.peripheral_perception = PeripheralPerception(output_shape)
+        self.combiner = VisualAttention(output_shape[0])
 
     def forward(self, x_img: torch.Tensor, x_roi: torch.Tensor = None) -> torch.Tensor:
         """
@@ -38,7 +39,7 @@ class VisualPerception(nn.Module):
         x_img : torch.Tensor
             Image coming from the environment (BS, 3, 160, 256)
         x_roi : torch.Tensor, optional
-            Region of interest proposed by the actor module
+            Region of interest foveated perception will operate on
 
         Returns
         -------
@@ -46,13 +47,13 @@ class VisualPerception(nn.Module):
             Visual features
         """
         if x_roi is None:
-            x_roi = center_crop(x_img, (self.roi_width, self.roi_height))
+            x_roi = center_crop(x_img, self.roi_shape)
         else:
             assert x_roi.shape == (
                 x_img.shape[0],
                 x_img.shape[1],
-                self.roi_width,
-                self.roi_height,
+                self.roi_shape[0],
+                self.roi_shape[1],
             )
 
         fov_x = self.foveated_perception(x_roi)
@@ -72,11 +73,26 @@ class FoveatedPerception(nn.Module):
     It does so by using small convolutions with low stride.
     """
 
-    def __init__(self):
+    def __init__(self, input_shape, output_shape):
         super().__init__()
-        self.conv1 = nn.Conv2d(3, 8, 3, 1)
-        self.conv2 = nn.Conv2d(8, 16, 3, 1)
-        self.max_pool = nn.MaxPool2d(2, 2)
+        self.conv1 = nn.Conv2d(
+            input_shape[0], output_shape[0] // 2, kernel_size=3, stride=1, padding=1
+        )
+        self.conv2 = nn.Conv2d(
+            output_shape[0] // 2, output_shape[0], kernel_size=3, stride=1, padding=1
+        )
+        stride = compute_stride(
+            (input_shape[1], input_shape[2]),
+            (output_shape[1] // 2, output_shape[2] // 2),
+            2,
+        )
+        self.mp1 = nn.MaxPool2d(kernel_size=2, stride=stride)
+        stride = compute_stride(
+            (output_shape[1] // 2, output_shape[2] // 2),
+            (output_shape[1], output_shape[2]),
+            2,
+        )
+        self.mp2 = nn.MaxPool2d(kernel_size=2, stride=stride)
         self.gelu = nn.GELU()
 
     def forward(self, x_img: torch.Tensor) -> torch.Tensor:
@@ -86,15 +102,15 @@ class FoveatedPerception(nn.Module):
         Parameters
         ----------
         x_img : torch.Tensor
-            RBG tensor array (BS, 3, 160, 256)
+            RBG tensor array (BS, 3, H, W)
 
         Returns
         -------
         torch.Tensor
             Set of visual features (BS, -1, nH, nW)
         """
-        x = self.gelu(self.max_pool(self.conv1(x_img)))
-        x = self.gelu(self.max_pool(self.conv2(x)))
+        x = self.gelu(self.mp1(self.conv1(x_img)))
+        x = self.gelu(self.mp2(self.conv2(x)))
         return x
 
 
@@ -107,10 +123,10 @@ class PeripheralPerception(nn.Module):
     It does so by using large convolutions with large stride.
     """
 
-    def __init__(self):
+    def __init__(self, input_shape, output_shape):
         super().__init__()
-        self.conv1 = nn.Conv2d(1, 8, 20, 4)
-        self.conv2 = nn.Conv2d(8, 16, 10, 2)
+        self.conv1 = nn.Conv2d(input_shape[0], output_shape[0] // 2, 20, 4)
+        self.conv2 = nn.Conv2d(output_shape[0] // 2, output_shape[0], 10, 2)
         self.max_pool = nn.MaxPool2d(2, 2)
         self.gelu = nn.GELU()
 

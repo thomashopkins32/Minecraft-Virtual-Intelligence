@@ -1,11 +1,11 @@
 import minedojo
 
 # Uncomment to see more logs of the MineRL launch
-#import coloredlogs
-#import logging
-#coloredlogs.install(logging.DEBUG)
+# import coloredlogs
+# import logging
+# coloredlogs.install(logging.DEBUG)
 
-env = minedojo.make(task_id='open-ended', image_size=(160,256))
+env = minedojo.make(task_id="open-ended", image_size=(160, 256))
 env.reset()
 
 done = False
