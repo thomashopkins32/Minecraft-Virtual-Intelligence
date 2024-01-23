@@ -5,7 +5,7 @@ import logging
 from math import floor
 
 
-def compute_conv2d_output_shape(input_shape, kernel_size, stride):
+def compute_output_shape(input_shape, kernel_size, stride):
     return (
         floor((input_shape[0] - kernel_size[0]) / stride[0] + 1),
         floor((input_shape[1] - kernel_size[1]) / stride[1] + 1),
@@ -20,7 +20,7 @@ def check_shape_validity(input_shape, target_shape):
 
 
 def check_shape_compatibility(input_shape, target_shape, kernel_size, stride):
-    out_shape = compute_conv2d_output_shape(input_shape, kernel_size, stride)
+    out_shape = compute_output_shape(input_shape, kernel_size, stride)
     if out_shape[0] != target_shape[0] or out_shape[1] != target_shape[1]:
         raise ValueError(
             f"Incompatible set of parameters: input_shape {input_shape}, target_shape {target_shape}, kernel_size {kernel_size}, stride {stride}"

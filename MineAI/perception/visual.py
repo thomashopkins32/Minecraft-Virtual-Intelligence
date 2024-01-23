@@ -28,7 +28,7 @@ class VisualPerception(nn.Module):
         self.peripheral_perception = PeripheralPerception(1, out_channels)
 
         # Combiner
-        self.attention = nn.MultiheadAttention(128, 3, batch_first=True)
+        self.attention = nn.MultiheadAttention(32, 4, batch_first=True)
 
     def forward(self, x_img: torch.Tensor, x_roi: torch.Tensor = None) -> torch.Tensor:
         """
@@ -79,10 +79,10 @@ class FoveatedPerception(nn.Module):
     def __init__(self, in_channels, out_channels):
         super().__init__()
         self.conv1 = nn.Conv2d(
-            in_channels, out_channels // 2, kernel_size=3, stride=1, padding=1
+            in_channels, out_channels // 2, kernel_size=3, stride=1
         )
         self.conv2 = nn.Conv2d(
-            out_channels // 2, out_channels, kernel_size=3, stride=1, padding=1
+            out_channels // 2, out_channels, kernel_size=3, stride=1
         )
         self.mp1 = nn.MaxPool2d(kernel_size=2, stride=2)
         self.mp2 = nn.MaxPool2d(kernel_size=2, stride=2)
@@ -119,10 +119,10 @@ class PeripheralPerception(nn.Module):
 
     def __init__(self, in_channels, out_channels):
         super().__init__()
-        self.conv1 = nn.Conv2d(in_channels, out_channels // 2, 40, 1)
-        self.conv2 = nn.Conv2d(out_channels // 2, out_channels, 20, 1)
-        self.mp1 = nn.MaxPool2d(5, 5)
-        self.mp2 = nn.MaxPool2d(5, 5)
+        self.conv1 = nn.Conv2d(in_channels, out_channels // 2, kernel_size=24, stride=3)
+        self.mp1 = nn.MaxPool2d(3, 3)
+        self.conv2 = nn.Conv2d(out_channels // 2, out_channels, kernel_size=10, stride=1)
+        self.mp2 = nn.MaxPool2d(2, 2)
         self.gelu = nn.GELU()
         self.flatten = nn.Flatten()
 

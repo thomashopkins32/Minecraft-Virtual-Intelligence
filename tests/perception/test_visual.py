@@ -1,5 +1,6 @@
 import pytest
 import torch
+from torchvision.transforms.functional import crop
 
 from MineAI.perception.visual import (
     VisualPerception,
@@ -16,6 +17,9 @@ def test_visual_perception_forward(visual_perception_module):
 
     output = visual_perception_module(input_tensor)
 
+    cropped_input = crop(input_tensor, 0, 0, 32, 32)
+    output2 = visual_perception_module(input_tensor, cropped_input)
+    
 
 @pytest.fixture
 def foveated_perception_module():
@@ -23,48 +27,30 @@ def foveated_perception_module():
 
 
 def test_foveated_perception_forward(foveated_perception_module):
-    # Input tensor with shape (BS, 3, 160, 256)
-    input_tensor = torch.randn((32, 3, 160, 256))
-
-    # Forward pass
+    input_tensor = torch.randn((32, 3, 32, 32))
     output = foveated_perception_module.forward(input_tensor)
-
-    # Check if the output has the expected shape
-    assert output.shape[1] == 16  # Check the number of output channels
-    assert (
-        output.shape[2] == input_tensor.shape[2] // 4
-    )  # Check the downsampling by MaxPool2d
-    assert output.shape[3] == input_tensor.shape[3] // 4
+    assert output.shape[1] == 32 * 6 * 6  # Check the number of output channels
 
 
 def test_foveated_perception_module_parameters(foveated_perception_module):
-    # Check the number of parameters in the module
     num_params = sum(p.numel() for p in foveated_perception_module.parameters())
-
-    # Expected number of parameters can be calculated based on the convolution layers
-    expected_params = 3 * (
-        3 * 8 * 3 * 3 + 8 * 16 * 3 * 3
-    )  # 3 conv layers with specified parameters
-
+    expected_params = (3 * 3 * 3 * 16) + 16 + (3 * 3 * 16 * 32) + 32
     assert num_params == expected_params
 
 
 @pytest.fixture
-def peripheral_percetion_module():
+def peripheral_perception_module():
     return PeripheralPerception(1, 32)
 
 
 def test_peripheral_perception_forward(peripheral_perception_module):
-    # Input tensor with shape (BS, 3, 160, 256)
-    input_tensor = torch.randn((32, 3, 160, 256))
-
-    # Forward pass
+    input_tensor = torch.randn((32, 1, 160, 256))
     output = peripheral_perception_module.forward(input_tensor)
+    assert output.shape[1] == 32 * 3 * 8
 
-    # Check if the output has the expected shape
-    assert output.shape[1] == 16  # Check the number of output channels
-    assert (
-        output.shape[2] == input_tensor.shape[2] // 4
-    )  # Check the downsampling by MaxPool2d
-    assert output.shape[3] == input_tensor.shape[3] // 4
+
+def test_peripheral_perception_module_parameters(peripheral_perception_module):
+    num_params = sum(p.numel() for p in peripheral_perception_module.parameters())
+    expected_params = (24 * 24 * 1 * 16) + 16 + (10 * 10 * 16 * 32) + 32
+    assert num_params == expected_params
 
