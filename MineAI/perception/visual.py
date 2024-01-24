@@ -28,7 +28,7 @@ class VisualPerception(nn.Module):
         self.peripheral_perception = PeripheralPerception(1, out_channels)
 
         # Combiner
-        self.attention = nn.MultiheadAttention(32, 4, batch_first=True)
+        self.attention = nn.MultiheadAttention(out_channels * 2, 4, batch_first=True)
 
     def forward(self, x_img: torch.Tensor, x_roi: torch.Tensor = None) -> torch.Tensor:
         """
@@ -62,7 +62,9 @@ class VisualPerception(nn.Module):
 
         combined = torch.cat((fov_x, per_x), dim=1)
         combined = combined.view(combined.size(0), 1, -1)
-        out = self.attention(combined, combined, combined)
+        out = self.attention(combined, combined, combined, need_weights=False)[
+            0
+        ].squeeze(1)
 
         return out
 
@@ -78,14 +80,16 @@ class FoveatedPerception(nn.Module):
 
     def __init__(self, in_channels, out_channels):
         super().__init__()
-        self.conv1 = nn.Conv2d(
-            in_channels, out_channels // 2, kernel_size=3, stride=1
-        )
-        self.conv2 = nn.Conv2d(
-            out_channels // 2, out_channels, kernel_size=3, stride=1
-        )
+        self.conv1 = nn.Conv2d(in_channels, out_channels // 3, kernel_size=3, stride=1)
         self.mp1 = nn.MaxPool2d(kernel_size=2, stride=2)
+        self.conv2 = nn.Conv2d(
+            out_channels // 3, 2 * out_channels // 3, kernel_size=3, stride=1
+        )
         self.mp2 = nn.MaxPool2d(kernel_size=2, stride=2)
+        self.conv3 = nn.Conv2d(
+            2 * out_channels // 3, out_channels, kernel_size=3, stride=1
+        )
+        self.mp3 = nn.AdaptiveMaxPool2d((1, 1))
         self.gelu = nn.GELU()
         self.flatten = nn.Flatten()
 
@@ -105,6 +109,7 @@ class FoveatedPerception(nn.Module):
         """
         x = self.gelu(self.mp1(self.conv1(x_img)))
         x = self.gelu(self.mp2(self.conv2(x)))
+        x = self.gelu(self.mp3(self.conv3(x)))
         return self.flatten(x)
 
 
@@ -121,8 +126,10 @@ class PeripheralPerception(nn.Module):
         super().__init__()
         self.conv1 = nn.Conv2d(in_channels, out_channels // 2, kernel_size=24, stride=3)
         self.mp1 = nn.MaxPool2d(3, 3)
-        self.conv2 = nn.Conv2d(out_channels // 2, out_channels, kernel_size=10, stride=1)
-        self.mp2 = nn.MaxPool2d(2, 2)
+        self.conv2 = nn.Conv2d(
+            out_channels // 2, out_channels, kernel_size=12, stride=2
+        )
+        self.mp2 = nn.AdaptiveMaxPool2d((1, 1))
         self.gelu = nn.GELU()
         self.flatten = nn.Flatten()
 
@@ -143,4 +150,3 @@ class PeripheralPerception(nn.Module):
         x = self.gelu(self.mp1(self.conv1(x_img)))
         x = self.gelu(self.mp2(self.conv2(x)))
         return self.flatten(x)
-
