@@ -1,10 +1,12 @@
+from typing import Union
+
 import torch
 import torch.nn as nn
 
 from perception.visual import VisualPerception
 
 
-class Agent(nn.Module):
+class AgentV1(nn.Module):
     '''
     Overarching module for the MineAI agent.
 
@@ -15,7 +17,15 @@ class Agent(nn.Module):
     - How fast is the visual perception module? Does it need to be faster?
     '''
     def __init__(self):
-        pass
+        super().__init__()
+        self.vision = VisualPerception(out_channels=32, roi_shape=(32, 32))
+        # Outputs are the 25 discrete pitch deltas and 25 discrete yaw deltas for the camera
+        self.pitch_action = nn.Linear(32 + 32, 25)
+        self.yaw_action = nn.Linear(32 + 32, 25)
+        self.softmax = nn.Softmax(dim=1)
 
-    def forward(self, x_obs):
-        pass
+    def forward(self, x_obs: torch.Tensor) -> Union[torch.Tensor, torch.Tensor]:
+        x = self.vision(x_obs)
+        pitch = self.softmax(self.pitch_action(x))
+        yaw = self.softmax(self.yaw_action(x))
+        return pitch, yaw
