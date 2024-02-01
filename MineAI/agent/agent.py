@@ -3,7 +3,7 @@ from typing import Union
 import torch
 import torch.nn as nn
 
-from perception.visual import VisualPerception
+from MineAI.perception.visual import VisualPerception
 
 
 class AgentV1(nn.Module):

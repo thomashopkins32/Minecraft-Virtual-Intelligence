@@ -12,6 +12,14 @@ FOVEATED_EXPECTED_PARAMS = (
     (3 * 3 * 3 * 10) + 10 + (3 * 3 * 10 * 21) + 21 + (3 * 3 * 21 * 32) + 32
 )
 PERIPHERAL_EXPECTED_PARAMS = (24 * 24 * 1 * 16) + 16 + (12 * 12 * 16 * 32) + 32
+VISUAL_EXPECTED_PARAMS = (
+    FOVEATED_EXPECTED_PARAMS
+    + PERIPHERAL_EXPECTED_PARAMS
+    + (64 * 64 * 3)
+    + (64 * 3)
+    + (64 * 64)
+    + 64
+)
 
 
 @pytest.fixture
@@ -34,15 +42,7 @@ def test_visual_perception_forward(visual_perception_module):
 
 def test_visual_perception_params(visual_perception_module):
     num_params = sum(p.numel() for p in visual_perception_module.parameters())
-    expected_params = (
-        FOVEATED_EXPECTED_PARAMS
-        + PERIPHERAL_EXPECTED_PARAMS
-        + (64 * 64 * 3)
-        + (64 * 3)
-        + (64 * 64)
-        + 64
-    )
-    assert num_params == expected_params
+    assert num_params == VISUAL_EXPECTED_PARAMS
 
 
 @pytest.fixture
