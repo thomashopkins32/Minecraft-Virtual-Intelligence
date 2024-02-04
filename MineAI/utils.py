@@ -1,8 +1,12 @@
 """
 Various utilities for the project.
 """
+from typing import Union, Float
 import logging
 from math import floor
+
+import torch
+import scipy
 
 
 def compute_output_shape(input_shape, kernel_size, stride):
@@ -87,3 +91,12 @@ def compute_stride(input_shape, target_shape, kernel_size):
         )
     check_shape_compatibility(input_shape, target_shape, kernel_size, stride)
     return stride
+
+
+def discount_cumsum(x : torch.Tensor, discount : Float) -> torch.Tensor:
+    ''' Taken from https://github.com/openai/spinningup/blob/master/spinup/algos/pytorch/ppo/core.py#L29 '''
+    return scipy.signal.lfilter([1], [1, float(-discount)], x[::-1], axis=0)[::-1]
+
+
+def statistics(x : torch.Tensor) -> Union[Float, Float]:
+    return torch.mean(x), torch.std(x)

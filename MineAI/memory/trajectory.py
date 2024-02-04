@@ -3,8 +3,10 @@ import logging
 
 import torch
 
+from MineAI.utils import discount_cumsum, statistics
 
-class Trajectory:
+
+class PPOTrajectory:
     '''
     Inspired by https://github.com/openai/spinningup/blob/master/spinup/algos/pytorch/ppo/ppo.py
     Used to store a single trajectory.
@@ -13,13 +15,11 @@ class Trajectory:
         self.max_buffer_size = max_buffer_size
         self.discount_factor = discount_factor
         self.gae_discount_factor = gae_discount_factor
-        self.observations = []
-        self.actions = []
-        self.advantages = []
-        self.rewards = []
-        self.returns = []
-        self.values = []
-        self.log_probs = []
+        self.observations: List[torch.Tensor] = []
+        self.actions: List[Dict[int, int]] = []
+        self.rewards: List[Float] = []
+        self.values: List[Float] = []
+        self.log_probs: List[Float] = []
 
     def store(self, observation: torch.Tensor, action: Dict[int, int], reward: Int, value: Int, log_prob: Dict[Int, Float]) -> None:
         '''
@@ -62,13 +62,18 @@ class Trajectory:
         rewards = torch.cat((torch.stack(self.rewards), last_value))
         values = torch.cat((torch.stack(self.values), last_value))
 
-        deltas = rewards[:-1] + self.gamma * values[1:] - values[:-1]
+        deltas = rewards[:-1] + self.discount_factor * values[1:] - values[:-1]
+        advantages = discount_cumsum(deltas, self.discount_factor * self.gae_discount_factor)
+        returns = discount_cumsum(rewards, self.discount_factor)[:-1]
 
+        # Normalize advantages
+        adv_mean, adv_std = statistics(advantages)
+        advantages = (advantages - adv_mean) / adv_std
 
-
-
-        return dict()
-
-
-
-
+        return {
+            "observations": torch.stack(self.observations),
+            "actions": self.actions,
+            "returns": returns,
+            "advantages": advantages,
+            "log_probs": torch.stack(self.log_probs),
+        }
