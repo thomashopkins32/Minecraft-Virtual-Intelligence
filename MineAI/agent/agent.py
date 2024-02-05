@@ -7,7 +7,7 @@ from MineAI.perception.visual import VisualPerception
 
 
 class AgentV1(nn.Module):
-    '''
+    """
     Overarching module for the MineAI agent.
 
     Version 1 of this agent will stand in place and observe the environment. It will be allowed to move its head only to look around.
@@ -15,7 +15,8 @@ class AgentV1(nn.Module):
     This is to test the following:
     - Can the agent learn to focus its attention on new information?
     - How fast is the visual perception module? Does it need to be faster?
-    '''
+    """
+
     def __init__(self):
         super().__init__()
         self.vision = VisualPerception(out_channels=32, roi_shape=(32, 32))
