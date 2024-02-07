@@ -1,9 +1,13 @@
-from typing import Union
+from typing import Tuple
 
 import torch
 import torch.nn as nn
+from torchvision.transforms.functional import crop # type: ignore
+import gymnasium
 
 from MineAI.perception.visual import VisualPerception
+from MineAI.affector.affector import LinearAffector
+from MineAI.reasoning.critic import LinearReasoner
 
 
 class AgentV1(nn.Module):
@@ -17,16 +21,22 @@ class AgentV1(nn.Module):
     - How fast is the visual perception module? Does it need to be faster?
     """
 
-    def __init__(self):
+    def __init__(self, action_space: gymnasium.MultiDiscrete):
         super().__init__()
-        self.vision = VisualPerception(out_channels=32, roi_shape=(32, 32))
-        # Outputs are the 25 discrete pitch deltas and 25 discrete yaw deltas for the camera
-        self.pitch_action = nn.Linear(32 + 32, 25)
-        self.yaw_action = nn.Linear(32 + 32, 25)
-        self.softmax = nn.Softmax(dim=1)
+        self.roi_shape = (32, 32)
+        self.vision = VisualPerception(out_channels=32, roi_shape=self.roi_shape)
+        self.affector = LinearAffector(32 + 32, action_space)
+        self.reasoner = LinearReasoner(32 + 32)
+        self.next_roi_coords = None
 
-    def forward(self, x_obs: torch.Tensor) -> Union[torch.Tensor, torch.Tensor]:
-        x = self.vision(x_obs)
-        pitch = self.softmax(self.pitch_action(x))
-        yaw = self.softmax(self.yaw_action(x))
-        return pitch, yaw
+    def forward(self, x_obs: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+        if self.next_roi_coords is not None:
+            x_roi = crop(x_obs, self.next_roi_coords[0], self.next_roi_coords[1], self.roi_shape[0], self.roi_shape[1])
+        else:
+            x_roi = None
+        x = self.vision(x_obs, x_roi)
+        actions = self.affector(x)
+        self.next_roi_coords = actions[-1]
+        value = self.reasoner(x)
+
+        return actions[:-1], value

@@ -1,4 +1,4 @@
-from typing import Dict, Any, Str, Float, UInt
+from typing import Dict, Any, Tuple
 
 import torch
 import torch.optim as optim
@@ -15,17 +15,17 @@ class PPO:
         env: gymnasium.Env,
         actor: torch.nn.Module,
         critic: torch.nn.Module,
-        epochs: UInt = 50,
-        steps_per_epoch: UInt = 4000,
-        discount_factor: Float = 0.99,
-        gae_discount_factor: Float = 0.97,
-        clip_ratio: Float = 0.2,
-        target_kl: Float = 0.01,
-        actor_lr: Float = 3e-4,
-        critic_lr: Float = 1e-3,
-        train_actor_iters: UInt = 80,
-        train_critic_iters: UInt = 80,
-        save_freq: UInt = 10,
+        epochs: int = 50,
+        steps_per_epoch: int = 4000,
+        discount_factor: float = 0.99,
+        gae_discount_factor: float = 0.97,
+        clip_ratio: float = 0.2,
+        target_kl: float = 0.01,
+        actor_lr: float = 3e-4,
+        critic_lr: float = 1e-3,
+        train_actor_iters: int = 80,
+        train_critic_iters: int = 80,
+        save_freq: int = 10,
     ):
         """
         Parameters
@@ -79,7 +79,7 @@ class PPO:
         self.actor_lr = actor_lr
         self.critic_lr = critic_lr
 
-    def _compute_actor_loss(self, data: Dict[Str, Any]) -> Float:
+    def _compute_actor_loss(self, data: Dict[str, Any]) -> Tuple[torch.Tensor, torch.Tensor]:
         obs, act, adv, logp_old = (
             data["observations"],
             data["actions"],
@@ -96,7 +96,7 @@ class PPO:
 
         return loss, kl
 
-    def _update_actor(self, data: Dict[Str, Any], optimizer: optim.Optimizer) -> None:
+    def _update_actor(self, data: Dict[str, Any], optimizer: optim.Optimizer) -> None:
         self.actor.train()
         for _ in range(self.train_actor_iters):
             optimizer.zero_grad()
@@ -108,11 +108,11 @@ class PPO:
             optimizer.step()
         self.actor.eval()
 
-    def _compute_critic_loss(self, data: Dict[Str, Any]) -> Float:
+    def _compute_critic_loss(self, data: Dict[str, Any]) -> torch.Tensor:
         obs, ret = data["observations"], data["returns"]
         return ((self.critic(obs) - ret) ** 2).mean()
 
-    def _update_critic(self, data: Dict[Str, Any], optimizer: optim.Optimizer) -> None:
+    def _update_critic(self, data: Dict[str, Any], optimizer: optim.Optimizer) -> None:
         self.critic.train()
         for _ in range(self.train_critic_iters):
             optimizer.zero_grad()
@@ -139,7 +139,7 @@ class PPO:
                 a, logp = self.actor(obs)
                 v = self.critic(obs)
 
-                next_obs, reward, _, info = self.env.step(a)
+                next_obs, reward, _, _ = self.env.step(a)
                 t_return += reward
 
                 trajectory_buffer.store(obs, a, reward, v, logp)

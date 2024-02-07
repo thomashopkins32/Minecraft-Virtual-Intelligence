@@ -1,3 +1,5 @@
+from typing import Union
+
 import torch
 import torch.nn as nn
 from torchvision.transforms.functional import center_crop, rgb_to_grayscale
@@ -29,7 +31,7 @@ class VisualPerception(nn.Module):
         # Combiner
         self.attention = nn.MultiheadAttention(out_channels * 2, 4, batch_first=True)
 
-    def forward(self, x_img: torch.Tensor, x_roi: torch.Tensor = None) -> torch.Tensor:
+    def forward(self, x_img: torch.Tensor, x_roi: Union[torch.Tensor, None] = None) -> torch.Tensor:
         """
         Process visual information from the environment.
 
