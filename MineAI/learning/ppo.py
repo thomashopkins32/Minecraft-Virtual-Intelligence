@@ -2,9 +2,11 @@ from typing import Dict, Any, Tuple
 
 import torch
 import torch.optim as optim
+from torchvision.transforms.functional import center_crop, crop # type: ignore
 import gymnasium
 
 from MineAI.memory.trajectory import PPOTrajectory
+from MineAI.agent.agent import AgentV1
 
 
 class PPO:
@@ -13,8 +15,8 @@ class PPO:
     def __init__(
         self,
         env: gymnasium.Env,
-        actor: torch.nn.Module,
-        critic: torch.nn.Module,
+        agent: AgentV1,
+        roi_shape: Tuple[int, int] = (32, 32),
         epochs: int = 50,
         steps_per_epoch: int = 4000,
         discount_factor: float = 0.99,
@@ -32,10 +34,10 @@ class PPO:
         ----------
         env : gymnasium.Env
             Environment for the agent to interact with; already initialized
-        actor : torch.nn.Module
-            Neural network to use as the policy; already initialized
-        critic : torch.nn.Module
-            Neural network to use as the value function; already initialized
+        agent : AgentV1
+            Neural network to use as the policy and value function; already initialized
+        roi_shape : Tuple[int, int], optional
+            Shape of the region of interest the agent has and will operate on
         epochs : int, optional
             Number of policy updates to perform after sampling experience
         steps_per_epoch : int, optional
@@ -61,11 +63,11 @@ class PPO:
         """
         # Environment & Agent
         self.env = env
-        self.actor = actor
-        self.critic = critic
+        self.agent = agent
+        self.roi_shape = roi_shape
 
         # Training duration
-        self.epochs = (epochs,)
+        self.epochs = epochs
         self.steps_per_epoch = steps_per_epoch
         self.train_actor_iters = train_actor_iters
         self.train_critic_iters = train_critic_iters
@@ -87,7 +89,7 @@ class PPO:
             data["log_probs"],
         )
 
-        _, logp = self.actor(obs, act)
+        (_, logp), _ = self.agent(obs, act)
         ratio = torch.exp(logp - logp_old)
         clip_adv = torch.clamp(ratio, 1 - self.clip_ratio, 1 + self.clip_ratio) * adv
         loss = -(torch.min(ratio * adv, clip_adv)).mean()
@@ -110,16 +112,17 @@ class PPO:
 
     def _compute_critic_loss(self, data: Dict[str, Any]) -> torch.Tensor:
         obs, ret = data["observations"], data["returns"]
-        return ((self.critic(obs) - ret) ** 2).mean()
+        _, v = self.agent(obs[0], obs[1])
+        return ((v - ret) ** 2).mean()
 
     def _update_critic(self, data: Dict[str, Any], optimizer: optim.Optimizer) -> None:
-        self.critic.train()
+        self.agent.train()
         for _ in range(self.train_critic_iters):
             optimizer.zero_grad()
             loss = self._compute_critic_loss(data)
             loss.backward()
             optimizer.step()
-        self.critic.eval()
+        self.agent.eval()
 
     def run(self):
         """Runs the proximal policy optimization algorithm"""
@@ -134,16 +137,19 @@ class PPO:
                 gae_discount_factor=self.gae_discount_factor,
             )
             obs = self.env.reset().as_tensor(dtype=torch.float)
+            roi_obs = center_crop(obs, self.roi_shape)
             t_return = 0.0
             for t in range(self.steps_per_epoch):
-                a, logp = self.actor(obs)
-                v = self.critic(obs)
-
-                next_obs, reward, _, _ = self.env.step(a)
+                a, v = self.agent(obs, roi_obs)
+                env_action = a[1]
+                logp_env_action = a[2]
+                roi_action = torch.round(a[3])
+                next_obs, reward, _, _ = self.env.step(env_action)
                 t_return += reward
 
-                trajectory_buffer.store(obs, a, reward, v, logp)
+                trajectory_buffer.store((obs, roi_obs), (env_action, roi_action), reward, v, logp_env_action)
                 obs = next_obs.as_tensor(dtype=torch.float)
+                roi_obs = crop(next_obs, roi_action[0], roi_action[1], self.roi_shape[0], self.roi_shape[1])
             data = trajectory_buffer.get()
             self._update_actor(data, actor_optim)
             self._update_critic(data, critic_optim)

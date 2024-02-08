@@ -1,8 +1,6 @@
-from typing import Union
-
 import torch
 import torch.nn as nn
-from torchvision.transforms.functional import center_crop, rgb_to_grayscale
+from torchvision.transforms.functional import rgb_to_grayscale # type: ignore
 
 
 class VisualPerception(nn.Module):
@@ -19,11 +17,8 @@ class VisualPerception(nn.Module):
         - Small convolutional filter that will pass over a very small region of interest within the image
         - The region of interest shall be determined by the most recent output of the actor module
     """
-    def __init__(self, out_channels=32, roi_shape=(32, 32)):
+    def __init__(self, out_channels: int = 32): 
         super().__init__()
-        # Set region of interest height and width
-        self.roi_shape = roi_shape
-
         # Set up sub-modules
         self.foveated_perception = FoveatedPerception(3, out_channels)
         self.peripheral_perception = PeripheralPerception(1, out_channels)
@@ -31,7 +26,7 @@ class VisualPerception(nn.Module):
         # Combiner
         self.attention = nn.MultiheadAttention(out_channels * 2, 4, batch_first=True)
 
-    def forward(self, x_img: torch.Tensor, x_roi: Union[torch.Tensor, None] = None) -> torch.Tensor:
+    def forward(self, x_img: torch.Tensor, x_roi: torch.Tensor) -> torch.Tensor:
         """
         Process visual information from the environment.
 
@@ -39,7 +34,7 @@ class VisualPerception(nn.Module):
         ----------
         x_img : torch.Tensor
             Image coming from the environment (BS, 3, 160, 256)
-        x_roi : torch.Tensor, optional
+        x_roi : torch.Tensor 
             Region of interest foveated perception will operate on
 
         Returns
@@ -47,15 +42,6 @@ class VisualPerception(nn.Module):
         torch.Tensor
             Visual features
         """
-        if x_roi is None:
-            x_roi = center_crop(x_img, self.roi_shape)
-        else:
-            assert x_roi.shape == (
-                x_img.shape[0],
-                x_img.shape[1],
-                self.roi_shape[0],
-                self.roi_shape[1],
-            )
         gray_x = rgb_to_grayscale(x_img)
 
         fov_x = self.foveated_perception(x_roi)

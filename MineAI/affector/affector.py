@@ -1,8 +1,7 @@
-from typing import Tuple, Any
+from typing import Tuple, Any, Union
 
 import torch
 import torch.nn as nn
-import gymnasium
 
 
 # (x, y) coorindate where the agent will focus its attention next
@@ -34,9 +33,11 @@ class LinearAffector(nn.Module):
         """
 
         # Internal
+        ## The percentage of the image width to crop from
         self.focus_action = nn.Linear(embed_dim, FOCUS_NUM_ACTIONS)
 
         self.softmax = nn.Softmax(dim=1)
+        self.sigmoid = nn.Sigmoid()
         self.action_space = action_space
 
     def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
@@ -53,7 +54,7 @@ class LinearAffector(nn.Module):
         """
 
         # If this doesn't work try (A * torch.ones((x.size(0), 1, 1)))
-        action = torch.as_tensor(self.action_space.no_op()).unsqueeze(0).repeat(x.size(0))
+        action = torch.zeros((10,)).unsqueeze(0).repeat(x.size(0), 0)
         logp_action = torch.zeros_like(action)
         action[0], logp_action[0] = self.get_action_and_logp(long_dist)
         action[1], logp_action[1] = self.get_action_and_logp(lat_dist)
@@ -69,9 +70,14 @@ class LinearAffector(nn.Module):
         action[6], logp_action[6] = 0, 1.0
         action[7], logp_action[7] = 0, 1.0
 
-        focus_coords = self.focus_action(x)
+        # TODO: This should be a gaussian distribution
+        # so we need mean, std for x and y separately.
+        # A total of 2 layers could work, one for the means of both
+        # and one for the stds of both.
+        # This way,
+        focus_coords = self.sigmoid(self.focus_action(x))
 
-        return action, logp_action, focus_coords
+        return action, logp_action
 
     def get_action_and_logp(self, dist):
         # TODO: Move to utils and rename to `sample_with_logp`
