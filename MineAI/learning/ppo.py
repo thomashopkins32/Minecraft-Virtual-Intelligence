@@ -2,7 +2,7 @@ from typing import Dict, Any, Tuple
 
 import torch
 import torch.optim as optim
-from torchvision.transforms.functional import center_crop, crop # type: ignore
+from torchvision.transforms.functional import center_crop, crop  # type: ignore
 import gymnasium
 
 from MineAI.memory.trajectory import PPOTrajectory
@@ -81,7 +81,9 @@ class PPO:
         self.actor_lr = actor_lr
         self.critic_lr = critic_lr
 
-    def _compute_actor_loss(self, data: Dict[str, Any]) -> Tuple[torch.Tensor, torch.Tensor]:
+    def _compute_actor_loss(
+        self, data: Dict[str, Any]
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         obs, act, adv, logp_old = (
             data["observations"],
             data["actions"],
@@ -127,8 +129,14 @@ class PPO:
     def run(self):
         """Runs the proximal policy optimization algorithm"""
 
-        actor_optim = optim.Adam(self.actor.parameters(), lr=self.actor_lr)
-        critic_optim = optim.Adam(self.critic.parameters(), lr=self.critic_lr)
+        actor_optim = optim.Adam(
+            self.agent.vision.parameters() + self.agent.affector.parameters(),
+            lr=self.actor_lr,
+        )
+        critic_optim = optim.Adam(
+            self.agent.vision.parameters() + self.agent.reasoner.parameters(),
+            lr=self.critic_lr,
+        )
 
         for e in range(self.epochs):
             trajectory_buffer = PPOTrajectory(
@@ -141,15 +149,74 @@ class PPO:
             t_return = 0.0
             for t in range(self.steps_per_epoch):
                 a, v = self.agent(obs, roi_obs)
-                env_action = a[1]
-                logp_env_action = a[2]
-                roi_action = torch.round(a[3])
+                action, logp_action = sample_action(a)
+                env_action = action[:-2]  # Don't include the region of interest
+                roi_action = action[-2:]
                 next_obs, reward, _, _ = self.env.step(env_action)
                 t_return += reward
 
-                trajectory_buffer.store((obs, roi_obs), (env_action, roi_action), reward, v, logp_env_action)
+                trajectory_buffer.store((obs, roi_obs), action, reward, v, logp_action)
                 obs = next_obs.as_tensor(dtype=torch.float)
-                roi_obs = crop(next_obs, roi_action[0], roi_action[1], self.roi_shape[0], self.roi_shape[1])
-            data = trajectory_buffer.get()
+                roi_obs = crop(
+                    next_obs,
+                    roi_action[0],
+                    roi_action[1],
+                    self.roi_shape[0],
+                    self.roi_shape[1],
+                )
+            _, last_v = self.agent(obs, roi_obs)
+            data = trajectory_buffer.get(last_v)
             self._update_actor(data, actor_optim)
             self._update_critic(data, critic_optim)
+
+    def sample_action(
+        self,
+        x: Tuple[
+            torch.Tensor,
+            torch.Tensor,
+            torch.Tensor,
+            torch.Tensor,
+            torch.Tensor,
+            torch.Tensor,
+            torch.Tensor,
+            torch.Tensor,
+            torch.Tensor,
+            torch.Tensor,
+        ],
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        """
+        Samples actions from the various distributions and combines them into an action tensor.
+        Outputs the action tensor and a logp tensor showing the log probability of taking that action.
+
+        Parameters
+        ----------
+        x : Tuple
+            List of distributions to sample from
+
+        Returns
+        -------
+        torch.Tensor
+            Action tensor representing the items sampled from the various distributions
+        torch.Tensor
+            Log probabilities of sampling the corresponding action
+        """
+        action = torch.zeros((10,))
+        long_action = torch.multinomial(x[0], num_samples=1)
+        long_logp = x[0][long_action].log()
+        lat_action = torch.multinomial(x[1], num_samples=1)
+        lat_logp = x[1][lat_action].log()
+        vert_action = torch.multinomial(x[2], num_samples=1)
+        vert_logp = x[2][vert_action].log()
+        pitch_action = torch.multinomial(x[3], num_samples=1)
+        pitch_logp = x[3][pitch_action].log()
+        yaw_action = torch.multinomial(x[4], num_samples=1)
+        yaw_logp = x[4][yaw_action].log()
+        func_action = torch.multinomial(x[5], num_samples=1)
+        func_logp = x[5][func_action].log()
+        craft_action = torch.multinomial(x[6], num_samples=1)
+        craft_logp = x[6][craft_action].log()
+        inventory_action = torch.multinomial(x[7], num_samples=1)
+        inventory_logp = x[7][inventory_action].log()
+
+        # TODO: Sample ROI action from mean, std stored in x[8], x[9]
+        raise NotImplementedError()

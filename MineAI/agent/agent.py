@@ -2,7 +2,6 @@ from typing import Tuple, Union
 
 import torch
 import torch.nn as nn
-from torchvision.transforms.functional import center_crop, crop # type: ignore
 import gymnasium
 
 from MineAI.perception.visual import VisualPerception
@@ -30,8 +29,3 @@ class AgentV1(nn.Module):
         actions = self.affector(x, x_act=x_act)
         value = self.reasoner(x)
         return actions, value
-
-    def act(self, x_obs: torch.Tensor, x_act: Union[torch.Tensor, None] = None) -> Tuple[torch.Tensor, torch.Tensor]:
-        '''
-
-        '''
