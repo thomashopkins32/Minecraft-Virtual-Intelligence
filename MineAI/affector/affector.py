@@ -34,8 +34,8 @@ class LinearAffector(nn.Module):
 
         # Internal
         ## distribution for which we can sample regions of interest
-        self.focus_mean_action = nn.Linear(embed_dim, FOCUS_NUM_ACTIONS)
-        self.focus_std_action = nn.Linear(embed_dim, FOCUS_NUM_ACTIONS)
+        self.focus_x_mean_std = nn.Linear(embed_dim, FOCUS_NUM_ACTIONS)
+        self.focus_y_mean_std = nn.Linear(embed_dim, FOCUS_NUM_ACTIONS)
 
         self.softmax = nn.Softmax(dim=1)
         self.sigmoid = nn.Sigmoid()
@@ -66,8 +66,8 @@ class LinearAffector(nn.Module):
         craft_dist = self.softmax(self.craft_action(x))
         inventory_dist = self.softmax(self.inventory_action(x))
         """
-        roi_means = self.focus_mean_action(x)
-        roi_stds = self.focus_std_action(x)
+        roi_means = self.focus_x_mean_std(x)
+        roi_stds = self.focus_y_mean_std(x)
 
         return (
             long_dist,

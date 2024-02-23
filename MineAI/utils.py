@@ -97,3 +97,16 @@ def discount_cumsum(x: torch.Tensor, discount: float) -> torch.Tensor:
 
 def statistics(x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
     return torch.mean(x), torch.std(x)
+
+
+def sample_multinomial(dist: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    ''' Returns a sample and its log probability for a multinomial distribution '''
+    sample = torch.multinomial(dist, 1)
+    return sample, dist[sample].log()
+
+
+def sample_guassian(mean: torch.Tensor, std: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    ''' Returns a sample and its log probability for a Guassian distribution '''
+    dist = torch.distributions.Normal(mean, std)
+    sample = dist.sample()
+    return sample, dist.log_prob(sample)

@@ -1,4 +1,4 @@
-from typing import List, Tuple, Dict, Int, Float, Str, Any
+from typing import Tuple
 import logging
 
 import torch
@@ -14,41 +14,41 @@ class PPOTrajectory:
 
     def __init__(
         self,
-        max_buffer_size: Int,
-        discount_factor: Float = 0.99,
-        gae_discount_factor: Float = 0.95,
+        max_buffer_size: int,
+        discount_factor: float = 0.99,
+        gae_discount_factor: float = 0.95,
     ):
         self.max_buffer_size = max_buffer_size
         self.discount_factor = discount_factor
         self.gae_discount_factor = gae_discount_factor
-        self.observations: List[torch.Tensor] = []
-        self.actions: List[Dict[int, int]] = []
-        self.rewards: List[Float] = []
-        self.values: List[Float] = []
-        self.log_probs: List[Float] = []
+        self.observations: list[Tuple[torch.Tensor, torch.Tensor]] = []
+        self.actions: list[torch.Tensor] = []
+        self.rewards: list[float] = []
+        self.values: list[float] = []
+        self.log_probs: list[torch.Tensor] = []
 
     def store(
         self,
-        observation: torch.Tensor,
-        action: Dict[int, int],
-        reward: Int,
-        value: Int,
-        log_prob: Dict[Int, Float],
+        observation: Tuple[torch.Tensor, torch.Tensor],
+        action: torch.Tensor,
+        reward: int,
+        value: int,
+        log_prob: torch.Tensor,
     ) -> None:
         """
         Append a single time-step to the trajectory.
 
         Parameters
         ----------
-        observation : torch.Tensor
-            Raw observation from the environment.
-        action : Dict[int, int]
-            Action dictionary for the MineDojo environment. There are different combinations of actions that can be made.
-        reward : Int
+        observation : Tuple[torch.Tensor, torch.Tensor]
+            Raw observation from the environment along with the region of interest.
+        action : torch.Tensor
+            Action tensor for the MineDojo environment + the region of interest (x,y) coordinates
+        reward : float
             Raw reward value from the environment.
-        value : Int
+        value : float
             Value assigned to the observation by the agent.
-        log_prob : Float
+        log_prob : torch.Tensor
             Probability of selecting each action.
         """
         if len(self.observations) == self.max_buffer_size:
@@ -62,7 +62,7 @@ class PPOTrajectory:
         self.values.append(value)
         self.log_probs.append(log_prob)
 
-    def get(self, last_value: Int) -> Dict[Str, Any]:
+    def get(self, last_value: float) -> dict[str, torch.Tensor]:
         """
         Computes the advantages and reward-to-go then returns the data from the trajectory.
 
@@ -76,8 +76,14 @@ class PPOTrajectory:
             logging.warn(
                 f"Computing information on a potentially unfinished trajectory. Current size: {size}. Max size: {self.max_buffer_size}"
             )
-        rewards = torch.cat((torch.stack(self.rewards), last_value))
-        values = torch.cat((torch.stack(self.values), last_value))
+        # Separate the observations into separate tensors
+        env_observations = torch.stack([obs[0] for obs in self.observations])
+        roi_observations = torch.stack([obs[1] for obs in self.observations])
+
+        self.rewards.append(last_value)
+        self.values.append(last_value)
+        rewards = torch.tensor(self.rewards)
+        values = torch.tensor(self.values)
 
         deltas = rewards[:-1] + self.discount_factor * values[1:] - values[:-1]
         advantages = discount_cumsum(
@@ -90,8 +96,9 @@ class PPOTrajectory:
         advantages = (advantages - adv_mean) / adv_std
 
         return {
-            "observations": torch.stack(self.observations),
-            "actions": self.actions,
+            "env_observations": env_observations,
+            "roi_observations": roi_observations,
+            "actions": torch.stack(self.actions),
             "returns": returns,
             "advantages": advantages,
             "log_probs": torch.stack(self.log_probs),
