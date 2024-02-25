@@ -83,16 +83,15 @@ class PPO:
     def _compute_actor_loss(
         self, data: Dict[str, Any]
     ) -> Tuple[torch.Tensor, torch.Tensor]:
-        # TODO: observations have been split up in the trajectory buffer
-        obs, act, adv, logp_old = (
-            data["observations"],
+        env_obs, roi_obs, act, adv, logp_old = (
+            data["env_observations"],
+            data["roi_observations"],
             data["actions"],
             data["advantages"],
             data["log_probs"],
         )
 
-        x_obs, x_roi = obs
-        action_dist, _ = self.agent(x_obs, x_roi)
+        action_dist, _ = self.agent(env_obs, roi_obs)
         logp = self._logp_action(action_dist, act)
         ratio = torch.exp(logp - logp_old)
         clip_adv = torch.clamp(ratio, 1 - self.clip_ratio, 1 + self.clip_ratio) * adv
@@ -115,8 +114,12 @@ class PPO:
         self.agent.eval()
 
     def _compute_critic_loss(self, data: Dict[str, Any]) -> torch.Tensor:
-        obs, ret = data["observations"], data["returns"]
-        _, v = self.agent(obs[0], obs[1])
+        env_obs, roi_obs, ret = (
+            data["env_observations"],
+            data["roi_observations"],
+            data["returns"],
+        )
+        _, v = self.agent(env_obs, roi_obs)
         return ((v - ret) ** 2).mean()
 
     def _update_critic(self, data: Dict[str, Any], optimizer: optim.Optimizer) -> None:
@@ -128,7 +131,8 @@ class PPO:
             optimizer.step()
         self.agent.eval()
 
-    def _logp_action(self,
+    def _logp_action(
+        self,
         action_dists: Tuple[
             torch.Tensor,
             torch.Tensor,
@@ -141,7 +145,7 @@ class PPO:
             torch.Tensor,
             torch.Tensor,
         ],
-        actions_taken: torch.Tensor
+        actions_taken: torch.Tensor,
     ) -> torch.Tensor:
         """
         Outputs the log probability of a sample as if the sample was taken
@@ -211,7 +215,6 @@ class PPO:
         action = torch.zeros((10,), dtype=torch.int)
         logp_action = torch.zeros((10,), dtype=torch.float)
 
-        
         action[0], logp_action[0] = sample_multinomial(action_dists[0])
         action[1], logp_action[1] = sample_multinomial(action_dists[1])
         action[2], logp_action[2] = sample_multinomial(action_dists[2])
@@ -220,8 +223,12 @@ class PPO:
         action[5], logp_action[5] = sample_multinomial(action_dists[5])
         action[6], logp_action[6] = sample_multinomial(action_dists[6])
         action[7], logp_action[7] = sample_multinomial(action_dists[7])
-        action[8], logp_action[8] = sample_guassian(action_dists[8][0], action_dists[8][1])
-        action[9], logp_action[9] = sample_guassian(action_dists[9][0], action_dists[9][1])
+        action[8], logp_action[8] = sample_guassian(
+            action_dists[8][0], action_dists[8][1]
+        )
+        action[9], logp_action[9] = sample_guassian(
+            action_dists[9][0], action_dists[9][1]
+        )
 
         return action, logp_action
 
@@ -229,7 +236,6 @@ class PPO:
         """Runs the proximal policy optimization algorithm"""
 
         # Separate the optimizers since the affector and reasoner learn different things
-        # TODO: Does sharing vision parameters here matter?
         actor_optim = optim.Adam(
             self.agent.vision.parameters() + self.agent.affector.parameters(),
             lr=self.actor_lr,

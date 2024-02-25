@@ -2,7 +2,8 @@ from abc import ABC, abstractmethod
 
 
 class Algorithm(ABC):
-    ''' Base class for learning algorithms '''
+    """Base class for learning algorithms"""
+
     # TODO: Come up with an interface after implementing some algorithms
     #       may not be possible to do generally
     @abstractmethod

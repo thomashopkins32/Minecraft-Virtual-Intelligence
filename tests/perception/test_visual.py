@@ -1,6 +1,6 @@
 import pytest
 import torch
-from torchvision.transforms.functional import crop
+from torchvision.transforms.functional import center_crop  # type: ignore
 
 from MineAI.perception.visual import (
     VisualPerception,
@@ -24,20 +24,16 @@ VISUAL_EXPECTED_PARAMS = (
 
 @pytest.fixture
 def visual_perception_module():
-    return VisualPerception(out_channels=32, roi_shape=(32, 32))
+    return VisualPerception(out_channels=32)
 
 
 def test_visual_perception_forward(visual_perception_module):
     input_tensor = torch.randn((32, 3, 160, 256))
+    cropped_input = center_crop(input_tensor, (32, 32))
 
-    output = visual_perception_module(input_tensor)
+    output = visual_perception_module(input_tensor, cropped_input)
 
     assert output.shape[1] == 32 + 32
-
-    cropped_input = crop(input_tensor, 0, 0, 32, 32)
-    output2 = visual_perception_module(input_tensor, cropped_input)
-
-    assert output2.shape[1] == 32 + 32
 
 
 def test_visual_perception_params(visual_perception_module):

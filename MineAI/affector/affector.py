@@ -1,11 +1,8 @@
-from typing import Tuple, Any
+from typing import Tuple
 
 import torch
 import torch.nn as nn
-
-
-# (x, y) coorindate where the agent will focus its attention next
-FOCUS_NUM_ACTIONS = 2
+from gymnasium.spaces import MultiDiscrete
 
 
 class LinearAffector(nn.Module):
@@ -15,7 +12,7 @@ class LinearAffector(nn.Module):
     This module produces distributions over actions for the environment given some input using linear layers.
     """
 
-    def __init__(self, embed_dim: int, action_space: Any):
+    def __init__(self, embed_dim: int, action_space: MultiDiscrete):
         super().__init__()
 
         # Movement
@@ -25,17 +22,15 @@ class LinearAffector(nn.Module):
         self.pitch_action = nn.Linear(embed_dim, action_space.nvec[3])
         self.yaw_action = nn.Linear(embed_dim, action_space.nvec[4])
 
-        """
         # Manipulation
         self.functional_action = nn.Linear(embed_dim, action_space.nvec[5])
         self.craft_action = nn.Linear(embed_dim, action_space.nvec[6])
         self.inventory_action = nn.Linear(embed_dim, action_space.nvec[7])
-        """
 
         # Internal
         ## distribution for which we can sample regions of interest
-        self.focus_x_mean_std = nn.Linear(embed_dim, FOCUS_NUM_ACTIONS)
-        self.focus_y_mean_std = nn.Linear(embed_dim, FOCUS_NUM_ACTIONS)
+        self.focus_x_mean_std = nn.Linear(embed_dim, 2)
+        self.focus_y_mean_std = nn.Linear(embed_dim, 2)
 
         self.softmax = nn.Softmax(dim=1)
         self.sigmoid = nn.Sigmoid()

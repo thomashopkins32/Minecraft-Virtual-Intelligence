@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from torchvision.transforms.functional import rgb_to_grayscale # type: ignore
+from torchvision.transforms.functional import rgb_to_grayscale  # type: ignore
 
 
 class VisualPerception(nn.Module):
@@ -17,7 +17,8 @@ class VisualPerception(nn.Module):
         - Small convolutional filter that will pass over a very small region of interest within the image
         - The region of interest shall be determined by the most recent output of the actor module
     """
-    def __init__(self, out_channels: int = 32): 
+
+    def __init__(self, out_channels: int = 32):
         super().__init__()
         # Set up sub-modules
         self.foveated_perception = FoveatedPerception(3, out_channels)
@@ -34,7 +35,7 @@ class VisualPerception(nn.Module):
         ----------
         x_img : torch.Tensor
             Image coming from the environment (BS, 3, 160, 256)
-        x_roi : torch.Tensor 
+        x_roi : torch.Tensor
             Region of interest foveated perception will operate on
 
         Returns

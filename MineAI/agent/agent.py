@@ -2,7 +2,7 @@ from typing import Tuple
 
 import torch
 import torch.nn as nn
-import gymnasium
+from gymnasium.spaces import MultiDiscrete
 
 from MineAI.perception.visual import VisualPerception
 from MineAI.affector.affector import LinearAffector
@@ -18,13 +18,15 @@ class AgentV1(nn.Module):
     - How fast is the visual perception module? Does it need to be faster?
     """
 
-    def __init__(self, action_space: gymnasium.MultiDiscrete):
+    def __init__(self, action_space: MultiDiscrete):
         super().__init__()
         self.vision = VisualPerception(out_channels=32)
         self.affector = LinearAffector(32 + 32, action_space)
         self.reasoner = LinearReasoner(32 + 32)
 
-    def forward(self, x_obs: torch.Tensor, x_roi: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    def forward(
+        self, x_obs: torch.Tensor, x_roi: torch.Tensor
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         x = self.vision(x_obs, x_roi)
         actions = self.affector(x)
         value = self.reasoner(x)
