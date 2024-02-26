@@ -31,8 +31,8 @@ class PPOTrajectory:
         self,
         observation: Tuple[torch.Tensor, torch.Tensor],
         action: torch.Tensor,
-        reward: int,
-        value: int,
+        reward: float,
+        value: float,
         log_prob: torch.Tensor,
     ) -> None:
         """
@@ -86,12 +86,13 @@ class PPOTrajectory:
         values = torch.tensor(self.values)
 
         deltas = rewards[:-1] + self.discount_factor * values[1:] - values[:-1]
-        advantages = discount_cumsum(
-            deltas, self.discount_factor * self.gae_discount_factor
-        )
-        returns = discount_cumsum(rewards, self.discount_factor)[:-1]
+        advantages = torch.tensor(discount_cumsum(
+            deltas.numpy(), self.discount_factor * self.gae_discount_factor
+        ).copy())
+        returns = torch.tensor(discount_cumsum(rewards.numpy(), self.discount_factor)[:-1].copy())
 
         # Normalize advantages
+        # TODO: Currently returning floats, need to specify dim
         adv_mean, adv_std = statistics(advantages)
         advantages = (advantages - adv_mean) / adv_std
 
