@@ -2,7 +2,7 @@ import pytest
 import torch
 from torchvision.transforms.functional import crop
 
-from MineAI.perception.visual import (
+from mvi.perception.visual import (
     VisualPerception,
     FoveatedPerception,
     PeripheralPerception,

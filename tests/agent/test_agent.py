@@ -1,7 +1,7 @@
 import pytest
 import torch
 
-from MineAI.agent.agent import AgentV1
+from mvi.agent.agent import AgentV1
 from tests.perception.test_visual import VISUAL_EXPECTED_PARAMS
 
 
