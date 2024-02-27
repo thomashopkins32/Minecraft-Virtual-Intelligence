@@ -11,14 +11,17 @@ def ppo_trajectory():
 
 
 def test_ppo_trajectory(ppo_trajectory):
-    obs = (torch.randn((1, 3, 32, 32), dtype=torch.float), torch.randn((1, 3, 5, 5), dtype=torch.float))
+    obs = (
+        torch.randn((3, 32, 32), dtype=torch.float),
+        torch.randn((3, 5, 5), dtype=torch.float),
+    )
     action = torch.zeros((10,))
     reward = 1.0
     value = 10.0
-    log_prob = 0.1
+    log_prob = torch.zeros((10,))
     for _ in range(10):
         ppo_trajectory.store(obs, action, reward, value, log_prob)
-    
+
     result = ppo_trajectory.get(last_value=2.5)
     env_obs = result["env_observations"]
     roi_obs = result["roi_observations"]
@@ -37,16 +40,22 @@ def test_ppo_trajectory(ppo_trajectory):
     assert env_obs.shape == (10, 3, 32, 32)
     assert roi_obs.shape == (10, 3, 5, 5)
     assert actions.shape == (10, 10)
-    assert returns.shape == (10, 1)
-    assert advantages.shape == (10, 1)
-    assert log_probs.shape == (10, 1)
+    assert returns.shape == (10,)
+    assert advantages.shape == (10,)
+    assert log_probs.shape == (10, 10)
 
-    expected_advantages = torch.tensor([
-        -5.3333282470703125, -5.333312988125, -5.333251953125, -5.3330078125, -5.328125, -5.3125, -5.25, -5.0, -4.0
-    ])
-    assert np.array_equal(advantages, expected_advantages)
-
-
-
-
-
+    expected_advantages = torch.tensor(
+        [
+            0.4243,
+            0.4242,
+            0.4241,
+            0.4235,
+            0.4212,
+            0.4118,
+            0.3745,
+            0.2254,
+            -0.3712,
+            -2.7577,
+        ]
+    )
+    assert np.allclose(advantages.numpy(), expected_advantages.numpy(), rtol=1e-3)
