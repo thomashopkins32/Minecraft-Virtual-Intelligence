@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "minecraft-vi"
+version = "0.0.1"
+authors = [
+    { name="Thomas Hopkins", email="thomas.hopkins.research@gmail.com" }
+]
+description = "Research on virtual intelligence in Minecraft"
+readme = "README.md"
+requires-python = ">=3.9"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: Unix",
+    "Development Status :: 1 - Planning",
+]
+
+[project.urls]
+Homepage = "https://github.com/thomashopkins32/Minecraft-Virtual-Intelligence"
+Issues = "https://github.com/thomashopkins32/Minecraft-Virtual-Intelligence/issues"
+
+[tool.setuptools.packages.find]
+where = ["mvi"]
+include = ["mvi*"]
+exclude = ["tests"]
+namespaces = false
+
+[tool.setuptools.dynamic]
+readme = {file = ["README.md"]}
+dependencies = {file = ["requirements.txt"]}

@@ -2,7 +2,7 @@ import pytest
 import numpy as np
 import torch
 
-from MineAI.memory.trajectory import PPOTrajectory
+from mvi.memory.trajectory import PPOTrajectory
 
 
 @pytest.fixture()

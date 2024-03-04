@@ -1,7 +1,7 @@
 import torch
 import minedojo # type: ignore
 
-from MineAI.agent.agent import AgentV1
+from mvi.agent.agent import AgentV1
 
 env = minedojo.make(task_id="open-ended", image_size=(160, 256))
 agent = AgentV1(env.action_space)

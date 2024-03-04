@@ -3,7 +3,7 @@ import logging
 
 import torch
 
-from MineAI.utils import discount_cumsum, statistics
+from mvi.utils import discount_cumsum, statistics
 
 
 class PPOTrajectory:

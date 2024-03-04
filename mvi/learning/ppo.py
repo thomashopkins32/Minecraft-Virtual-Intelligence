@@ -5,9 +5,9 @@ import torch.optim as optim
 from torchvision.transforms.functional import center_crop, crop  # type: ignore
 import gymnasium
 
-from MineAI.memory.trajectory import PPOTrajectory
-from MineAI.agent.agent import AgentV1
-from MineAI.utils import sample_multinomial, sample_guassian
+from mvi.memory.trajectory import PPOTrajectory
+from mvi.agent.agent import AgentV1
+from mvi.utils import sample_multinomial, sample_guassian
 
 
 class PPO:

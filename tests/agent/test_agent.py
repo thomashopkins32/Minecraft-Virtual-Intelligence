@@ -2,7 +2,7 @@ import pytest
 import torch
 from torchvision.transforms.functional import center_crop  # type: ignore
 
-from MineAI.agent.agent import AgentV1
+from mvi.agent.agent import AgentV1
 from tests.perception.test_visual import VISUAL_EXPECTED_PARAMS
 from tests.affector.test_affector import LINEAR_AFFECTOR_EXPECTED_PARAMS
 from tests.reasoning.test_critic import LINEAR_REASONER_EXPECTED_PARAMS

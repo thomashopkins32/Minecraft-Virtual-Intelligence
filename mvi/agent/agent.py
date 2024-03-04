@@ -4,9 +4,9 @@ import torch
 import torch.nn as nn
 from gymnasium.spaces import MultiDiscrete
 
-from MineAI.perception.visual import VisualPerception
-from MineAI.affector.affector import LinearAffector
-from MineAI.reasoning.critic import LinearReasoner
+from mvi.perception.visual import VisualPerception
+from mvi.affector.affector import LinearAffector
+from mvi.reasoning.critic import LinearReasoner
 
 
 class AgentV1(nn.Module):

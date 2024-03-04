@@ -1,7 +1,7 @@
 import pytest
 import torch
 
-from MineAI.reasoning.critic import LinearReasoner
+from mvi.reasoning.critic import LinearReasoner
 
 
 EMBED_DIM = 64
