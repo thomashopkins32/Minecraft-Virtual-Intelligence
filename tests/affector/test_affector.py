@@ -1,7 +1,7 @@
 import pytest
 import torch
 
-from MineAI.affector.affector import LinearAffector
+from mvi.affector.affector import LinearAffector
 from tests.helper import ACTION_SPACE
 
 
