@@ -17,6 +17,7 @@ class VisualPerception(nn.Module):
         - Small convolutional filter that will pass over a very small region of interest within the image
         - The region of interest shall be determined by the most recent output of the actor module
     """
+
     def __init__(self, out_channels=32, roi_shape=(32, 32)):
         super().__init__()
         # Set region of interest height and width
