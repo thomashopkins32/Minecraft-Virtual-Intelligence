@@ -1,5 +1,5 @@
 import torch
-import minedojo # type: ignore
+import minedojo  # type: ignore
 
 from mvi.agent.agent import AgentV1
 

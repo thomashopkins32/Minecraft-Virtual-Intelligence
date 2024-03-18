@@ -86,11 +86,15 @@ class PPOTrajectory:
         values = torch.tensor(self.values)
 
         deltas = rewards[:-1] + self.discount_factor * values[1:] - values[:-1]
-        advantages = torch.tensor(discount_cumsum(
-            deltas.numpy(), self.discount_factor * self.gae_discount_factor
-        ).copy())
+        advantages = torch.tensor(
+            discount_cumsum(
+                deltas.numpy(), self.discount_factor * self.gae_discount_factor
+            ).copy()
+        )
         print(advantages)
-        returns = torch.tensor(discount_cumsum(rewards.numpy(), self.discount_factor)[:-1].copy()).squeeze()
+        returns = torch.tensor(
+            discount_cumsum(rewards.numpy(), self.discount_factor)[:-1].copy()
+        ).squeeze()
 
         # Normalize advantages
         adv_mean, adv_std = statistics(advantages)

@@ -1,6 +1,7 @@
 """
 Various utilities for the project.
 """
+
 import logging
 from math import floor
 
