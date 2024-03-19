@@ -1,4 +1,5 @@
 from typing import Dict, Any, Tuple
+from itertools import chain
 
 import torch
 import torch.optim as optim
@@ -237,18 +238,18 @@ class PPO:
 
         # Separate the optimizers since the affector and reasoner learn different things
         actor_optim = optim.Adam(
-            self.agent.vision.parameters() + self.agent.affector.parameters(),
+            chain(self.agent.vision.parameters(), self.agent.affector.parameters()),
             lr=self.actor_lr,
         )
         critic_optim = optim.Adam(
-            self.agent.vision.parameters() + self.agent.reasoner.parameters(),
+            chain(self.agent.vision.parameters(), self.agent.reasoner.parameters()),
             lr=self.critic_lr,
         )
 
         for e in range(self.epochs):
             trajectory_buffer = PPOTrajectory(
                 max_buffer_size=self.steps_per_epoch,
-                discount_factor=self.dicsount_factor,
+                discount_factor=self.discount_factor,
                 gae_discount_factor=self.gae_discount_factor,
             )
             obs = self.env.reset().as_tensor(dtype=torch.float)
