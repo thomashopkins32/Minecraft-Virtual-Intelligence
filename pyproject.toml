@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=61.0"]
+requires = ["setuptools", "setuptools-scm"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -23,7 +23,7 @@ Homepage = "https://github.com/thomashopkins32/Minecraft-Virtual-Intelligence"
 Issues = "https://github.com/thomashopkins32/Minecraft-Virtual-Intelligence/issues"
 
 [tool.setuptools.packages.find]
-where = ["mvi"]
+where = ["."]
 include = ["mvi*"]
 exclude = ["tests"]
 namespaces = false
