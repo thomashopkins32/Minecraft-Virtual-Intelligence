@@ -164,20 +164,46 @@ class PPO:
         torch.Tensor
             Log probabilities of actions taken the corresponding action
         """
-        logp_action = torch.zeros((actions_taken.size(0), 10,), dtype=torch.float)
+        logp_action = torch.zeros(
+            (
+                actions_taken.size(0),
+                10,
+            ),
+            dtype=torch.float,
+        )
 
         long_actions_taken = actions_taken.long()
-        logp_action[:, 0] = action_dists[0].gather(1, long_actions_taken[:, 0].unsqueeze(-1)).squeeze()
-        logp_action[:, 1] = action_dists[1].gather(1, long_actions_taken[:, 1].unsqueeze(-1)).squeeze()
-        logp_action[:, 2] = action_dists[2].gather(1, long_actions_taken[:, 2].unsqueeze(-1)).squeeze()
-        logp_action[:, 3] = action_dists[3].gather(1, long_actions_taken[:, 3].unsqueeze(-1)).squeeze()
-        logp_action[:, 4] = action_dists[4].gather(1, long_actions_taken[:, 4].unsqueeze(-1)).squeeze()
-        logp_action[:, 5] = action_dists[5].gather(1, long_actions_taken[:, 5].unsqueeze(-1)).squeeze()
-        logp_action[:, 6] = action_dists[6].gather(1, long_actions_taken[:, 6].unsqueeze(-1)).squeeze()
-        logp_action[:, 7] = action_dists[7].gather(1, long_actions_taken[:, 7].unsqueeze(-1)).squeeze()
-        x_roi_dist = torch.distributions.Normal(action_dists[8][:, 0], action_dists[9][:, 0])
+        logp_action[:, 0] = (
+            action_dists[0].gather(1, long_actions_taken[:, 0].unsqueeze(-1)).squeeze()
+        )
+        logp_action[:, 1] = (
+            action_dists[1].gather(1, long_actions_taken[:, 1].unsqueeze(-1)).squeeze()
+        )
+        logp_action[:, 2] = (
+            action_dists[2].gather(1, long_actions_taken[:, 2].unsqueeze(-1)).squeeze()
+        )
+        logp_action[:, 3] = (
+            action_dists[3].gather(1, long_actions_taken[:, 3].unsqueeze(-1)).squeeze()
+        )
+        logp_action[:, 4] = (
+            action_dists[4].gather(1, long_actions_taken[:, 4].unsqueeze(-1)).squeeze()
+        )
+        logp_action[:, 5] = (
+            action_dists[5].gather(1, long_actions_taken[:, 5].unsqueeze(-1)).squeeze()
+        )
+        logp_action[:, 6] = (
+            action_dists[6].gather(1, long_actions_taken[:, 6].unsqueeze(-1)).squeeze()
+        )
+        logp_action[:, 7] = (
+            action_dists[7].gather(1, long_actions_taken[:, 7].unsqueeze(-1)).squeeze()
+        )
+        x_roi_dist = torch.distributions.Normal(
+            action_dists[8][:, 0], action_dists[9][:, 0]
+        )
         logp_action[:, 8] = x_roi_dist.log_prob(actions_taken[:, 8])
-        y_roi_dist = torch.distributions.Normal(action_dists[8][:, 1], action_dists[9][:, 1])
+        y_roi_dist = torch.distributions.Normal(
+            action_dists[8][:, 1], action_dists[9][:, 1]
+        )
         logp_action[:, 9] = y_roi_dist.log_prob(actions_taken[:, 9])
 
         return logp_action
@@ -194,8 +220,8 @@ class PPO:
             torch.Tensor,
             torch.Tensor,
             torch.Tensor,
-              torch.Tensor,
-        ]
+            torch.Tensor,
+        ],
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Samples actions from the various distributions and combines them into an action tensor.
@@ -222,9 +248,9 @@ class PPO:
         action[2], logp_action[2] = sample_multinomial(action_dists[2][0])
         action[3], logp_action[3] = sample_multinomial(action_dists[3][0])
         action[4], logp_action[4] = sample_multinomial(action_dists[4][0])
-        action[5], logp_action[5] = 0, 0 #sample_multinomial(action_dists[5][0])
-        action[6], logp_action[6] = 0, 0 #sample_multinomial(action_dists[6][0])
-        action[7], logp_action[7] = 0, 0 #sample_multinomial(action_dists[7][0])
+        action[5], logp_action[5] = 0, 0  # sample_multinomial(action_dists[5][0])
+        action[6], logp_action[6] = 0, 0  # sample_multinomial(action_dists[6][0])
+        action[7], logp_action[7] = 0, 0  # sample_multinomial(action_dists[7][0])
         action[8], logp_action[8] = sample_guassian(
             action_dists[8][0, 0], action_dists[9][0, 0]
         )
@@ -253,7 +279,9 @@ class PPO:
                 discount_factor=self.discount_factor,
                 gae_discount_factor=self.gae_discount_factor,
             )
-            obs = torch.tensor(self.env.reset()['rgb'].copy(), dtype=torch.float).unsqueeze(0)
+            obs = torch.tensor(
+                self.env.reset()["rgb"].copy(), dtype=torch.float
+            ).unsqueeze(0)
             roi_obs = center_crop(obs, self.roi_shape)
             t_return = 0.0
             for t in range(self.steps_per_epoch):
@@ -264,8 +292,12 @@ class PPO:
                 next_obs, reward, _, _ = self.env.step(env_action)
                 t_return += reward
 
-                trajectory_buffer.store((obs.squeeze(), roi_obs.squeeze()), action, reward, v, logp_action)
-                obs = torch.tensor(next_obs['rgb'].copy(), dtype=torch.float).unsqueeze(0)
+                trajectory_buffer.store(
+                    (obs.squeeze(), roi_obs.squeeze()), action, reward, v, logp_action
+                )
+                obs = torch.tensor(next_obs["rgb"].copy(), dtype=torch.float).unsqueeze(
+                    0
+                )
                 roi_obs = crop(
                     obs,
                     roi_action[0],
