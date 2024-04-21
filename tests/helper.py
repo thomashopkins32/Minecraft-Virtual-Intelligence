@@ -6,7 +6,7 @@ from gymnasium import spaces
 ACTION_SPACE = spaces.MultiDiscrete([3, 3, 4, 25, 25, 8, 244, 36])
 
 
-class TestEnv(gymnasium.Env):
+class MockEnv(gymnasium.Env):
     def __init__(self):
         super().__init__()
 

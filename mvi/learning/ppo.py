@@ -93,7 +93,8 @@ class PPO:
         )
 
         action_dist, _ = self.agent(env_obs, roi_obs)
-        logp = self._logp_action(action_dist, act)
+        # Sum the log probs of each action to get the joint log probability of the full action
+        logp = self._logp_action(action_dist, act).sum(dim=-1)
         ratio = torch.exp(logp - logp_old)
         clip_adv = torch.clamp(ratio, 1 - self.clip_ratio, 1 + self.clip_ratio) * adv
         loss = -(torch.min(ratio * adv, clip_adv)).mean()
@@ -104,14 +105,22 @@ class PPO:
 
     def _update_actor(self, data: Dict[str, Any], optimizer: optim.Optimizer) -> None:
         self.agent.train()
-        for _ in range(self.train_actor_iters):
+        for i in range(self.train_actor_iters):
+            print(f"pass {i}...")
             optimizer.zero_grad()
+            for n in self.agent.named_parameters():
+                print(n[1].grad)
             loss, kl = self._compute_actor_loss(data)
             if kl > 1.5 * self.target_kl:
                 # early stopping
                 break
+            for n in self.agent.named_parameters():
+                print(n[1].grad)
             loss.backward()
+            for n in self.agent.named_parameters():
+                print(n[1].grad)
             optimizer.step()
+            print(f"complete")
         self.agent.eval()
 
     def _compute_critic_loss(self, data: Dict[str, Any]) -> torch.Tensor:
@@ -149,6 +158,10 @@ class PPO:
         actions_taken: torch.Tensor,
     ) -> torch.Tensor:
         """
+        TODO: Refactor to only return a float. We cannot store the intermediary results
+              in a new tensor because this breaks the computation graph. For the gradient
+              to be able to flow through the PyTorch graph, we need to sum the intermediary
+              logps together.
         Outputs the log probability of a sample as if the sample was taken
         from the distribution already.
 
@@ -162,8 +175,10 @@ class PPO:
         Returns
         -------
         torch.Tensor
-            Log probabilities of actions taken the corresponding action
+            Log probabilities of sampling the corresponding action. To get the joint log-probability of the
+            action, you can `.sum()` this tensor.
         """
+        # TODO: cannot create a new tensor since it is detached from the computation graph
         logp_action = torch.zeros(
             (
                 actions_taken.size(0),
@@ -237,7 +252,8 @@ class PPO:
         torch.Tensor
             Action tensor representing the items sampled from the various distributions
         torch.Tensor
-            Log probabilities of sampling the corresponding action
+            Log probabilities of sampling the corresponding action. To get the joint log-probability of the
+            action, you can `.sum()` this tensor.
         """
         # Initialize action and log buffer
         action = torch.zeros((10,), dtype=torch.int)
@@ -265,11 +281,13 @@ class PPO:
 
         # Separate the optimizers since the affector and reasoner learn different things
         actor_optim = optim.Adam(
-            chain(self.agent.vision.parameters(), self.agent.affector.parameters()),
+            self.agent.parameters(),
+            #chain(self.agent.vision.parameters(), self.agent.affector.parameters()),
             lr=self.actor_lr,
         )
         critic_optim = optim.Adam(
-            chain(self.agent.vision.parameters(), self.agent.reasoner.parameters()),
+            self.agent.parameters(),
+            #chain(self.agent.vision.parameters(), self.agent.reasoner.parameters()),
             lr=self.critic_lr,
         )
 
@@ -292,8 +310,9 @@ class PPO:
                 next_obs, reward, _, _ = self.env.step(env_action)
                 t_return += reward
 
+                # Sum the log probability to get the joint probability of selecting the full action
                 trajectory_buffer.store(
-                    (obs.squeeze(), roi_obs.squeeze()), action, reward, v, logp_action
+                    (obs.squeeze(), roi_obs.squeeze()), action, reward, v, logp_action.sum()
                 )
                 obs = torch.tensor(next_obs["rgb"].copy(), dtype=torch.float).unsqueeze(
                     0

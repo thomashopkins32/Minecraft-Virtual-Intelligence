@@ -2,12 +2,12 @@ import pytest
 from mvi.agent.agent import AgentV1
 from mvi.learning.ppo import PPO
 
-from tests.helper import TestEnv
+from tests.helper import MockEnv
 
 
 @pytest.fixture
 def ppo_module():
-    env = TestEnv()
+    env = MockEnv()
     agent = AgentV1(env.action_space)
     return PPO(
         env,
