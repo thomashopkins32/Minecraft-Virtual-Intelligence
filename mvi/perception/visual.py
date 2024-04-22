@@ -22,7 +22,7 @@ class VisualPerception(nn.Module):
         super().__init__()
         # Set up sub-modules
         self.foveated_perception = FoveatedPerception(3, out_channels)
-        self.peripheral_perception = PeripheralPerception(1, out_channels)
+        self.peripheral_perception = PeripheralPerception(3, out_channels)
 
         # Combiner
         self.attention = nn.MultiheadAttention(out_channels * 2, 4, batch_first=True)
@@ -43,10 +43,8 @@ class VisualPerception(nn.Module):
         torch.Tensor
             Visual features
         """
-        gray_x = rgb_to_grayscale(x_img)
-
         fov_x = self.foveated_perception(x_roi)
-        per_x = self.peripheral_perception(gray_x)
+        per_x = self.peripheral_perception(x_img)
 
         combined = torch.cat((fov_x, per_x), dim=1)
         combined = combined.view(combined.size(0), 1, -1)
@@ -88,12 +86,12 @@ class FoveatedPerception(nn.Module):
         Parameters
         ----------
         x_img : torch.Tensor
-            RBG tensor array (BS, 3, H, W)
+            RBG tensor array (BS, in_channels, H, W)
 
         Returns
         -------
         torch.Tensor
-            Set of visual features (BS, -1, nH, nW)
+            Set of visual features (BS, out_channels, nH, nW)
         """
         x = self.gelu(self.mp1(self.conv1(x_img)))
         x = self.gelu(self.mp2(self.conv2(x)))
@@ -128,12 +126,12 @@ class PeripheralPerception(nn.Module):
         Parameters
         ----------
         x_img : torch.Tensor
-            Grayscale image of the environment (BS, 1, 160, 256)
+            Image of the environment (BS, in_channels, 160, 256)
 
         Returns
         -------
         torch.Tensor
-            Set of visual features (BS, -1, nH, nW)
+            Set of visual features (BS, out_channels, nH, nW)
         """
         x = self.gelu(self.mp1(self.conv1(x_img)))
         x = self.gelu(self.mp2(self.conv2(x)))

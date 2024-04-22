@@ -93,8 +93,7 @@ class PPO:
         )
 
         action_dist, _ = self.agent(env_obs, roi_obs)
-        # Sum the log probs of each action to get the joint log probability of the full action
-        logp = self._logp_action(action_dist, act).sum(dim=-1)
+        logp = self._joint_logp_action(action_dist, act)
         ratio = torch.exp(logp - logp_old)
         clip_adv = torch.clamp(ratio, 1 - self.clip_ratio, 1 + self.clip_ratio) * adv
         loss = -(torch.min(ratio * adv, clip_adv)).mean()
@@ -141,7 +140,7 @@ class PPO:
             optimizer.step()
         self.agent.eval()
 
-    def _logp_action(
+    def _joint_logp_action(
         self,
         action_dists: Tuple[
             torch.Tensor,
@@ -158,10 +157,6 @@ class PPO:
         actions_taken: torch.Tensor,
     ) -> torch.Tensor:
         """
-        TODO: Refactor to only return a float. We cannot store the intermediary results
-              in a new tensor because this breaks the computation graph. For the gradient
-              to be able to flow through the PyTorch graph, we need to sum the intermediary
-              logps together.
         Outputs the log probability of a sample as if the sample was taken
         from the distribution already.
 
@@ -178,50 +173,41 @@ class PPO:
             Log probabilities of sampling the corresponding action. To get the joint log-probability of the
             action, you can `.sum()` this tensor.
         """
-        # TODO: cannot create a new tensor since it is detached from the computation graph
-        logp_action = torch.zeros(
-            (
-                actions_taken.size(0),
-                10,
-            ),
-            dtype=torch.float,
-        )
-
         long_actions_taken = actions_taken.long()
-        logp_action[:, 0] = (
+        joint_logp = (
             action_dists[0].gather(1, long_actions_taken[:, 0].unsqueeze(-1)).squeeze()
         )
-        logp_action[:, 1] = (
+        joint_logp += (
             action_dists[1].gather(1, long_actions_taken[:, 1].unsqueeze(-1)).squeeze()
         )
-        logp_action[:, 2] = (
+        joint_logp += (
             action_dists[2].gather(1, long_actions_taken[:, 2].unsqueeze(-1)).squeeze()
         )
-        logp_action[:, 3] = (
+        joint_logp += (
             action_dists[3].gather(1, long_actions_taken[:, 3].unsqueeze(-1)).squeeze()
         )
-        logp_action[:, 4] = (
+        joint_logp += (
             action_dists[4].gather(1, long_actions_taken[:, 4].unsqueeze(-1)).squeeze()
         )
-        logp_action[:, 5] = (
+        joint_logp += (
             action_dists[5].gather(1, long_actions_taken[:, 5].unsqueeze(-1)).squeeze()
         )
-        logp_action[:, 6] = (
+        joint_logp += (
             action_dists[6].gather(1, long_actions_taken[:, 6].unsqueeze(-1)).squeeze()
         )
-        logp_action[:, 7] = (
+        joint_logp += (
             action_dists[7].gather(1, long_actions_taken[:, 7].unsqueeze(-1)).squeeze()
         )
         x_roi_dist = torch.distributions.Normal(
             action_dists[8][:, 0], action_dists[9][:, 0]
         )
-        logp_action[:, 8] = x_roi_dist.log_prob(actions_taken[:, 8])
+        joint_logp += x_roi_dist.log_prob(actions_taken[:, 8])
         y_roi_dist = torch.distributions.Normal(
             action_dists[8][:, 1], action_dists[9][:, 1]
         )
-        logp_action[:, 9] = y_roi_dist.log_prob(actions_taken[:, 9])
+        joint_logp += y_roi_dist.log_prob(actions_taken[:, 9])
 
-        return logp_action
+        return joint_logp
 
     def _sample_action(
         self,
