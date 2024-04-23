@@ -1,4 +1,5 @@
 import pytest
+import torch
 from mvi.agent.agent import AgentV1
 from mvi.learning.ppo import PPO
 
@@ -21,4 +22,5 @@ def ppo_module():
 
 
 def test_ppo_run(ppo_module):
+    torch.autograd.anomaly_mode.set_detect_anomaly(True)
     ppo_module.run()

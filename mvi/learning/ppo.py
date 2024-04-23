@@ -107,17 +107,20 @@ class PPO:
         for i in range(self.train_actor_iters):
             print(f"pass {i}...")
             optimizer.zero_grad()
+            print('----------------------------------------------------------------------------------------------')
             for n in self.agent.named_parameters():
-                print(n[1].grad)
+                print(f"{n[0]}: {n[1].grad}")
             loss, kl = self._compute_actor_loss(data)
             if kl > 1.5 * self.target_kl:
                 # early stopping
                 break
+            print('----------------------------------------------------------------------------------------------')
             for n in self.agent.named_parameters():
-                print(n[1].grad)
+                print(f"{n[0]}: {n[1].grad}")
             loss.backward()
+            print('----------------------------------------------------------------------------------------------')
             for n in self.agent.named_parameters():
-                print(n[1].grad)
+                print(f"{n[0]}: {n[1].grad}")
             optimizer.step()
             print(f"complete")
         self.agent.eval()
@@ -177,35 +180,36 @@ class PPO:
         joint_logp = (
             action_dists[0].gather(1, long_actions_taken[:, 0].unsqueeze(-1)).squeeze()
         )
-        joint_logp += (
+        # Avoid += here as it is an in-place operation (which is bad for autograd)
+        joint_logp = joint_logp + (
             action_dists[1].gather(1, long_actions_taken[:, 1].unsqueeze(-1)).squeeze()
         )
-        joint_logp += (
+        joint_logp = joint_logp + (
             action_dists[2].gather(1, long_actions_taken[:, 2].unsqueeze(-1)).squeeze()
         )
-        joint_logp += (
+        joint_logp = joint_logp + (
             action_dists[3].gather(1, long_actions_taken[:, 3].unsqueeze(-1)).squeeze()
         )
-        joint_logp += (
+        joint_logp = joint_logp + (
             action_dists[4].gather(1, long_actions_taken[:, 4].unsqueeze(-1)).squeeze()
         )
-        joint_logp += (
+        joint_logp = joint_logp + (
             action_dists[5].gather(1, long_actions_taken[:, 5].unsqueeze(-1)).squeeze()
         )
-        joint_logp += (
+        joint_logp = joint_logp + (
             action_dists[6].gather(1, long_actions_taken[:, 6].unsqueeze(-1)).squeeze()
         )
-        joint_logp += (
+        joint_logp = joint_logp + (
             action_dists[7].gather(1, long_actions_taken[:, 7].unsqueeze(-1)).squeeze()
         )
         x_roi_dist = torch.distributions.Normal(
             action_dists[8][:, 0], action_dists[9][:, 0]
         )
-        joint_logp += x_roi_dist.log_prob(actions_taken[:, 8])
+        joint_logp = joint_logp + x_roi_dist.log_prob(actions_taken[:, 8])
         y_roi_dist = torch.distributions.Normal(
             action_dists[8][:, 1], action_dists[9][:, 1]
         )
-        joint_logp += y_roi_dist.log_prob(actions_taken[:, 9])
+        joint_logp = joint_logp + y_roi_dist.log_prob(actions_taken[:, 9])
 
         return joint_logp
 
@@ -265,15 +269,12 @@ class PPO:
     def run(self):
         """Runs the proximal policy optimization algorithm"""
 
-        # Separate the optimizers since the affector and reasoner learn different things
         actor_optim = optim.Adam(
-            self.agent.parameters(),
-            #chain(self.agent.vision.parameters(), self.agent.affector.parameters()),
+            chain(self.agent.vision.parameters(), self.agent.affector.parameters()),
             lr=self.actor_lr,
         )
         critic_optim = optim.Adam(
-            self.agent.parameters(),
-            #chain(self.agent.vision.parameters(), self.agent.reasoner.parameters()),
+            chain(self.agent.vision.parameters(), self.agent.reasoner.parameters()),
             lr=self.critic_lr,
         )
 
@@ -289,7 +290,8 @@ class PPO:
             roi_obs = center_crop(obs, self.roi_shape)
             t_return = 0.0
             for t in range(self.steps_per_epoch):
-                a, v = self.agent(obs, roi_obs)
+                with torch.no_grad():
+                    a, v = self.agent(obs, roi_obs)
                 action, logp_action = self._sample_action(a)
                 env_action = action[:-2].numpy()  # Don't include the region of interest
                 roi_action = action[-2:]
