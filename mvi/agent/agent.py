@@ -24,9 +24,21 @@ class AgentV1(nn.Module):
         self.affector = LinearAffector(32 + 32, action_space)
         self.reasoner = LinearReasoner(32 + 32)
 
-    def forward(
-        self, x_obs: torch.Tensor, x_roi: torch.Tensor
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+    def forward(self, x_obs: torch.Tensor, x_roi: torch.Tensor) -> Tuple[
+        Tuple[
+            torch.Tensor,
+            torch.Tensor,
+            torch.Tensor,
+            torch.Tensor,
+            torch.Tensor,
+            torch.Tensor,
+            torch.Tensor,
+            torch.Tensor,
+            torch.Tensor,
+            torch.Tensor,
+        ],
+        torch.Tensor,
+    ]:
         x = self.vision(x_obs, x_roi)
         actions = self.affector(x)
         value = self.reasoner(x)

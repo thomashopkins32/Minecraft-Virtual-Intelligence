@@ -1,5 +1,6 @@
+gymnasium
 numpy
-tqdm
+scipy
 torch
 torchvision
-gymnasium
+tqdm
