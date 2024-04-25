@@ -104,31 +104,14 @@ class PPO:
 
     def _update_actor(self, data: Dict[str, Any], optimizer: optim.Optimizer) -> None:
         self.agent.train()
-        for i in range(self.train_actor_iters):
-            print(f"pass {i}...")
+        for _ in range(self.train_actor_iters):
             optimizer.zero_grad()
-            print(
-                "----------------------------------------------------------------------------------------------"
-            )
-            for n in self.agent.named_parameters():
-                print(f"{n[0]}: {n[1].grad}")
             loss, kl = self._compute_actor_loss(data)
             if kl > 1.5 * self.target_kl:
                 # early stopping
                 break
-            print(
-                "----------------------------------------------------------------------------------------------"
-            )
-            for n in self.agent.named_parameters():
-                print(f"{n[0]}: {n[1].grad}")
             loss.backward()
-            print(
-                "----------------------------------------------------------------------------------------------"
-            )
-            for n in self.agent.named_parameters():
-                print(f"{n[0]}: {n[1].grad}")
             optimizer.step()
-            print(f"complete")
         self.agent.eval()
 
     def _compute_critic_loss(self, data: Dict[str, Any]) -> torch.Tensor:
@@ -183,31 +166,32 @@ class PPO:
             action, you can `.sum()` this tensor.
         """
         long_actions_taken = actions_taken.long()
-        joint_logp = (
+        joint_logp = (  # longitudinal movement
             action_dists[0].gather(1, long_actions_taken[:, 0].unsqueeze(-1)).squeeze()
         )
         # Avoid += here as it is an in-place operation (which is bad for autograd)
-        joint_logp = joint_logp + (
+        joint_logp = joint_logp + (  # lateral movement
             action_dists[1].gather(1, long_actions_taken[:, 1].unsqueeze(-1)).squeeze()
         )
-        joint_logp = joint_logp + (
+        joint_logp = joint_logp + (  # vertical movement
             action_dists[2].gather(1, long_actions_taken[:, 2].unsqueeze(-1)).squeeze()
         )
-        joint_logp = joint_logp + (
+        joint_logp = joint_logp + (  # pitch movement
             action_dists[3].gather(1, long_actions_taken[:, 3].unsqueeze(-1)).squeeze()
         )
-        joint_logp = joint_logp + (
+        joint_logp = joint_logp + (  # yaw movement
             action_dists[4].gather(1, long_actions_taken[:, 4].unsqueeze(-1)).squeeze()
         )
-        joint_logp = joint_logp + (
+        joint_logp = joint_logp + (  # functional actions
             action_dists[5].gather(1, long_actions_taken[:, 5].unsqueeze(-1)).squeeze()
         )
-        joint_logp = joint_logp + (
+        joint_logp = joint_logp + (  # crafting actions
             action_dists[6].gather(1, long_actions_taken[:, 6].unsqueeze(-1)).squeeze()
         )
-        joint_logp = joint_logp + (
+        joint_logp = joint_logp + (  # inventory actions
             action_dists[7].gather(1, long_actions_taken[:, 7].unsqueeze(-1)).squeeze()
         )
+        # Focus actions
         x_roi_dist = torch.distributions.Normal(
             action_dists[8][:, 0], action_dists[9][:, 0]
         )
@@ -304,12 +288,12 @@ class PPO:
                 next_obs, reward, _, _ = self.env.step(env_action)
                 t_return += reward
 
-                # Sum the log probability to get the joint probability of selecting the full action
                 trajectory_buffer.store(
                     (obs.squeeze(), roi_obs.squeeze()),
                     action,
                     reward,
                     v,
+                    # Sum the log probability to get the joint probability of selecting the full action
                     logp_action.sum(),
                 )
                 obs = torch.tensor(next_obs["rgb"].copy(), dtype=torch.float).unsqueeze(

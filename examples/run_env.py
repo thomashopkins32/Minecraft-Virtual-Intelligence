@@ -2,7 +2,6 @@ import minedojo  # type: ignore
 
 env = minedojo.make(task_id="open-ended", image_size=(160, 256))
 obs = env.reset()
-print(obs)
 done = False
 while not done:
     full_action = env.action_space.no_op()

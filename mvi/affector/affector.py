@@ -13,6 +13,22 @@ class LinearAffector(nn.Module):
     """
 
     def __init__(self, embed_dim: int, action_space: MultiDiscrete):
+        """
+        Parameters
+        ----------
+        embed_dim : int
+            Dimension of the input embeddings
+        action_space : MultiDiscrete
+            The action space for Minecraft is a length 8 numpy array:
+            0: longitudinal movement (i.e. moving forward and back)
+            1: lateral movement (i.e. moving left and right)
+            2: vertical movement (i.e. jumping)
+            3: pitch movement (vertical rotation, i.e. looking up and down)
+            4: yaw movement (hortizontal rotation, i.e. looking left and right)
+            5: functional (0: noop, 1: use, 2: drop, 3: attack, 4: craft, 5: equip, 6: place, 7: destroy)
+            6: item index to craft
+            7: inventory index
+        """
         super().__init__()
 
         # Movement
