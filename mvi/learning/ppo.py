@@ -107,18 +107,24 @@ class PPO:
         for i in range(self.train_actor_iters):
             print(f"pass {i}...")
             optimizer.zero_grad()
-            print('----------------------------------------------------------------------------------------------')
+            print(
+                "----------------------------------------------------------------------------------------------"
+            )
             for n in self.agent.named_parameters():
                 print(f"{n[0]}: {n[1].grad}")
             loss, kl = self._compute_actor_loss(data)
             if kl > 1.5 * self.target_kl:
                 # early stopping
                 break
-            print('----------------------------------------------------------------------------------------------')
+            print(
+                "----------------------------------------------------------------------------------------------"
+            )
             for n in self.agent.named_parameters():
                 print(f"{n[0]}: {n[1].grad}")
             loss.backward()
-            print('----------------------------------------------------------------------------------------------')
+            print(
+                "----------------------------------------------------------------------------------------------"
+            )
             for n in self.agent.named_parameters():
                 print(f"{n[0]}: {n[1].grad}")
             optimizer.step()
@@ -300,7 +306,11 @@ class PPO:
 
                 # Sum the log probability to get the joint probability of selecting the full action
                 trajectory_buffer.store(
-                    (obs.squeeze(), roi_obs.squeeze()), action, reward, v, logp_action.sum()
+                    (obs.squeeze(), roi_obs.squeeze()),
+                    action,
+                    reward,
+                    v,
+                    logp_action.sum(),
                 )
                 obs = torch.tensor(next_obs["rgb"].copy(), dtype=torch.float).unsqueeze(
                     0
