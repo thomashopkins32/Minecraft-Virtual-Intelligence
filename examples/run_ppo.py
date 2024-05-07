@@ -7,7 +7,7 @@ from mvi.learning.ppo import PPO
 from mvi.config import parse_config
 
 if __name__ == "__main__":
-    
+
     config = parse_config(sys.argv[1])
 
     env = minedojo.make(task_id="open-ended", image_size=(160, 256))
