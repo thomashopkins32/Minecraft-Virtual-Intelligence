@@ -14,11 +14,6 @@ class PPO:
     def __init__(
         self,
         agent: AgentV1, # TODO: decide if this should be the full agent or split into actor & critic
-        roi_shape: Tuple[int, int] = (32, 32),
-        epochs: int = 50,
-        steps_per_epoch: int = 4000,
-        discount_factor: float = 0.99,
-        gae_discount_factor: float = 0.97,
         clip_ratio: float = 0.2,
         target_kl: float = 0.01,
         actor_lr: float = 3e-4,
@@ -30,18 +25,8 @@ class PPO:
         """
         Parameters
         ----------
-        env : gymnasium.Env
-            Environment for t        roi_dist = torch.distributions.Normal(x[8], x[9])
-        roi_action = roi_dist.sample()
-        roi_logp = roi_dist.log_prob(roi_action)ion of interest the agent has and will operate on
-        epochs : int, optional
-            Number of policy updates to perform after sampling experience
-        steps_per_epoch : int, optional
-            Number of steps of interaction with the environment per epoch
-        discount_factor : float, optional
-            Used to weight preference for long-term reward (aka gamma)
-        gae_discount_factor : float, optional
-            Used to weight preference for long-term advantage (aka lambda)
+        agent : AgentV1
+            Agent that contains the actor and critic modules
         clip_ratio : float, optional
             Maximum allowed divergence of the new policy from the old policy in the objective function (aka epsilon)
         target_kl : float, optional
@@ -59,18 +44,12 @@ class PPO:
         """
         # Environment & Agent
         self.agent = agent
-        self.roi_shape = roi_shape
 
         # Training duration
-        self.epochs = epochs
-        self.steps_per_epoch = steps_per_epoch
         self.train_actor_iters = train_actor_iters
         self.train_critic_iters = train_critic_iters
-        self.save_freq = save_freq
 
         # Learning hyperparameters
-        self.discount_factor = discount_factor
-        self.gae_discount_factor = gae_discount_factor
         self.clip_ratio = clip_ratio
         self.target_kl = target_kl
 
