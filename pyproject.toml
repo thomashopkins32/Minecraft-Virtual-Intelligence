@@ -22,6 +22,9 @@ classifiers = [
 Homepage = "https://github.com/thomashopkins32/Minecraft-Virtual-Intelligence"
 Issues = "https://github.com/thomashopkins32/Minecraft-Virtual-Intelligence/issues"
 
+[project.scripts]
+mvi = "mvi.engine:run"
+
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["mvi*"]
