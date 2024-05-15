@@ -1,16 +1,19 @@
 # Configuration template for running the engine
 
-# PPO settings
-PPO:
+# Engine settings
+Engine:
   roi_shape: [32, 32]
   epochs: 50
   steps_per_epoch: 4000
   discount_factor: 0.99
   gae_discount_factor: 0.97
+  save_freq: 10
+
+# PPO settings
+PPO:
   clip_ratio: 0.2
   target_kl: 0.01
   actor_lr: 3e-4
   critic_lr: 1e-3
   train_actor_iters: 80
   train_critic_iters: 80
-  save_freq: 10

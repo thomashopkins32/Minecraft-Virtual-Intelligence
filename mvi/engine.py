@@ -1,7 +1,11 @@
+from typing import Tuple, Dict, Any
+
 import torch
 from torchvision.transforms.functional import center_crop
+import minedojo # type: ignore
 
 from mvi.memory.trajectory import TrajectoryBuffer
+from mvi.agent.agent import AgentV1
 
 
 def run(
@@ -14,27 +18,11 @@ def run(
     **ppo_kwargs: Dict[str, Any],
 ):
     """
-    Runs the Minecraft environment with the virtual intelligence in it
-
-    Parameters
-    ----------
-    roi_shape : Tuple[int, int]
-        Image shape used by foveated perception
-    epochs : int, optional
-        Number of policy updates to perform after sampling experience
-    steps_per_epoch : int, optional
-        Number of steps of interaction with the environment per epoch
-    discount_factor : float, optional
-        Used to weight preference for long-term reward (aka gamma)
-    gae_discount_factor : float, optional
-        Used to weight preference for long-term advantage (aka lambda)
-    clip_ratio : float, optional
-        Maximum allowed divergence of the new policy from the old policy in the objective function (aka epsilon)
-    save_freq : int, optional
-        Rate in terms of number of epochs that the actor and critic models are saved to disk
-    ppo_kwargs : Dict[str, Any]
-        Parameters passed through to the PPO learning algorithm
+    Main entry point: runs the Minecraft environment with the virtual intelligence in it
     """
+    env = minedojo.make(task_id="open-ended", image_size=(160, 256))
+    agent = AgentV1(env.action_space)
+    ppo = PPO(env, agent, **config["PPO"])
 
     for e in range(epochs):
         trajectory_buffer = TrajectoryBuffer(
