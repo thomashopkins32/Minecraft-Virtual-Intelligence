@@ -1,5 +1,9 @@
 # Configuration template for running the engine
 
+# Engine settings
+Engine:
+  image_size: [160, 256]
+
 # PPO settings
 PPO:
   roi_shape: [32, 32]
