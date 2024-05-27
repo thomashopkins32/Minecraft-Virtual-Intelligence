@@ -3,10 +3,7 @@ from itertools import chain
 
 import torch
 import torch.optim as optim
-from torchvision.transforms.functional import center_crop, crop  # type: ignore
-import gymnasium
 
-from mvi.memory.trajectory import PPOTrajectory
 from mvi.agent.agent import AgentV1
 from mvi.utils import sample_multinomial, sample_guassian
 
@@ -16,36 +13,19 @@ class PPO:
 
     def __init__(
         self,
-        env: gymnasium.Env,
         agent: AgentV1,
-        roi_shape: Tuple[int, int] = (32, 32),
-        epochs: int = 50,
-        steps_per_epoch: int = 4000,
-        discount_factor: float = 0.99,
-        gae_discount_factor: float = 0.97,
         clip_ratio: float = 0.2,
         target_kl: float = 0.01,
         actor_lr: float = 3e-4,
         critic_lr: float = 1e-3,
         train_actor_iters: int = 80,
         train_critic_iters: int = 80,
-        save_freq: int = 10,
     ):
         """
         Parameters
         ----------
-        env : gymnasium.Env
-            Environment for t        roi_dist = torch.distributions.Normal(x[8], x[9])
-        roi_action = roi_dist.sample()
-        roi_logp = roi_dist.log_prob(roi_action)ion of interest the agent has and will operate on
-        epochs : int, optional
-            Number of policy updates to perform after sampling experience
-        steps_per_epoch : int, optional
-            Number of steps of interaction with the environment per epoch
-        discount_factor : float, optional
-            Used to weight preference for long-term reward (aka gamma)
-        gae_discount_factor : float, optional
-            Used to weight preference for long-term advantage (aka lambda)
+        agent : AgentV1
+            Minecraft agent model used as the actor and critic
         clip_ratio : float, optional
             Maximum allowed divergence of the new policy from the old policy in the objective function (aka epsilon)
         target_kl : float, optional
@@ -58,28 +38,25 @@ class PPO:
             Number of iterations to train the actor per epoch
         train_critic_iters : int, optional
             Number of iterations to train the critic per epoch
-        save_freq : int, optional
-            Rate in terms of number of epochs that the actor and critic models are saved to disk
         """
         # Environment & Agent
-        self.env = env
         self.agent = agent
-        self.roi_shape = roi_shape
 
         # Training duration
-        self.epochs = epochs
-        self.steps_per_epoch = steps_per_epoch
         self.train_actor_iters = train_actor_iters
         self.train_critic_iters = train_critic_iters
-        self.save_freq = save_freq
 
         # Learning hyperparameters
-        self.discount_factor = discount_factor
-        self.gae_discount_factor = gae_discount_factor
         self.clip_ratio = clip_ratio
         self.target_kl = target_kl
-        self.actor_lr = actor_lr
-        self.critic_lr = critic_lr
+        self.actor_optim = optim.Adam(
+            chain(self.agent.vision.parameters(), self.agent.affector.parameters()),
+            lr=actor_lr,
+        )
+        self.critic_optim = optim.Adam(
+            chain(self.agent.vision.parameters(), self.agent.reasoner.parameters()),
+            lr=critic_lr,
+        )
 
     def _compute_actor_loss(
         self, data: Dict[str, Any]
@@ -102,16 +79,16 @@ class PPO:
 
         return loss, kl
 
-    def _update_actor(self, data: Dict[str, Any], optimizer: optim.Optimizer) -> None:
+    def _update_actor(self, data: Dict[str, Any]) -> None:
         self.agent.train()
         for _ in range(self.train_actor_iters):
-            optimizer.zero_grad()
+            self.actor_optim.zero_grad()
             loss, kl = self._compute_actor_loss(data)
             if kl > 1.5 * self.target_kl:
                 # early stopping
                 break
             loss.backward()
-            optimizer.step()
+            self.actor_optim.step()
         self.agent.eval()
 
     def _compute_critic_loss(self, data: Dict[str, Any]) -> torch.Tensor:
@@ -123,13 +100,13 @@ class PPO:
         _, v = self.agent(env_obs, roi_obs)
         return ((v - ret) ** 2).mean()
 
-    def _update_critic(self, data: Dict[str, Any], optimizer: optim.Optimizer) -> None:
+    def _update_critic(self, data: Dict[str, Any]) -> None:
         self.agent.train()
         for _ in range(self.train_critic_iters):
-            optimizer.zero_grad()
+            self.critic_optim.zero_grad()
             loss = self._compute_critic_loss(data)
             loss.backward()
-            optimizer.step()
+            self.critic_optim.step()
         self.agent.eval()
 
     def _joint_logp_action(
@@ -256,57 +233,13 @@ class PPO:
 
         return action, logp_action
 
-    def run(self):
-        """Runs the proximal policy optimization algorithm"""
+    def _save_models(self):
+        """Saves model checkpoints to the current working directory"""
+        # TODO 
+        raise NotImplementedError
 
-        actor_optim = optim.Adam(
-            chain(self.agent.vision.parameters(), self.agent.affector.parameters()),
-            lr=self.actor_lr,
-        )
-        critic_optim = optim.Adam(
-            chain(self.agent.vision.parameters(), self.agent.reasoner.parameters()),
-            lr=self.critic_lr,
-        )
-
-        for e in range(self.epochs):
-            trajectory_buffer = PPOTrajectory(
-                max_buffer_size=self.steps_per_epoch,
-                discount_factor=self.discount_factor,
-                gae_discount_factor=self.gae_discount_factor,
-            )
-            obs = torch.tensor(
-                self.env.reset()["rgb"].copy(), dtype=torch.float
-            ).unsqueeze(0)
-            roi_obs = center_crop(obs, self.roi_shape)
-            t_return = 0.0
-            for t in range(self.steps_per_epoch):
-                with torch.no_grad():
-                    a, v = self.agent(obs, roi_obs)
-                action, logp_action = self._sample_action(a)
-                env_action = action[:-2].numpy()  # Don't include the region of interest
-                roi_action = action[-2:]
-                next_obs, reward, _, _ = self.env.step(env_action)
-                t_return += reward
-
-                trajectory_buffer.store(
-                    (obs.squeeze(), roi_obs.squeeze()),
-                    action,
-                    reward,
-                    v,
-                    # Sum the log probability to get the joint probability of selecting the full action
-                    logp_action.sum(),
-                )
-                obs = torch.tensor(next_obs["rgb"].copy(), dtype=torch.float).unsqueeze(
-                    0
-                )
-                roi_obs = crop(
-                    obs,
-                    roi_action[0],
-                    roi_action[1],
-                    self.roi_shape[0],
-                    self.roi_shape[1],
-                )
-            _, last_v = self.agent(obs, roi_obs)
-            data = trajectory_buffer.get(last_v)
-            self._update_actor(data, actor_optim)
-            self._update_critic(data, critic_optim)
+    def update(self, data: Dict[str, Any]) -> None:
+        """Updates the actor and critic models given the a dataset of trajectories"""
+        self._update_actor(data)
+        self._update_critic(data)
+        self._save_models()
