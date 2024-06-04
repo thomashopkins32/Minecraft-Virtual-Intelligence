@@ -1,9 +1,9 @@
-from dataclasses import dataclass
-import logging
+from dataclasses import dataclass, is_dataclass
 import argparse
-from typing import Dict, Any, Tuple
+from typing import Any, Tuple
 
 import yaml
+from dacite import from_dict
 
 
 @dataclass
@@ -76,15 +76,15 @@ class Config:
     ppo : PPOConfig
         Configuration for the PPO learning algorithm
     """
+
     engine: EngineConfig
     ppo: PPOConfig
 
 
-def get_config() -> Dict[str, Any]:
-    # TODO: Refactor to use new dataclasses
+def get_config() -> Config:
     arguments = parse_arguments()
     config = parse_config(arguments.file)
-    return update_config(config, arguments.key_value_pairs)
+    return config
 
 
 def parse_arguments() -> argparse.Namespace:
@@ -93,7 +93,11 @@ def parse_arguments() -> argparse.Namespace:
         description="Specify arguments for running Minecraft Virtual Intelligence"
     )
     parser.add_argument(
-        "-f", "--file", help="Path to YAML configuration file", required=True
+        "-f",
+        "--file",
+        help="Path to YAML configuration file",
+        required=False,
+        default=None,
     )
     parser.add_argument(
         "key_value_pairs",
@@ -103,7 +107,7 @@ def parse_arguments() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def parse_config(yaml_path: str) -> Dict[str, Any]:
+def parse_config(yaml_path: str) -> Config:
     """
     Parses the configuration file used by the engine.
 
@@ -114,46 +118,52 @@ def parse_config(yaml_path: str) -> Dict[str, Any]:
 
     Returns
     -------
-    Dict[str, Any]
-        The configuration as a dictionary
+    Config
+        The current configuration
     """
-    # TODO: Refactor to use new dataclasses
-    with open(yaml_path, "r") as fp:
-        config = yaml.safe_load(fp)
+    if yaml_path is None:
+        config = Config()
+    else:
+        with open(yaml_path, "r") as fp:
+            config_dict = yaml.safe_load(fp)
+        config = from_dict(data_class=Config, data=config_dict)
 
     return config
 
 
-def parse_value(value: Any) -> Any:
+def parse_value(value: str) -> Any:
     """Parses the value as if it was being loaded in a YAML file"""
     return yaml.load(value, Loader=yaml.SafeLoader)
 
 
-def update_config(config: Dict[str, Any], key_value_pairs: list[str]) -> Dict[str, Any]:
-    """ "Updates the configuration using the command-line argumments"""
-    # TODO: Refactor to use new dataclasses
+def set_value(instance: Any, keys: list[str], value: Any) -> None:
+
+    for key in keys[:-1]:
+        instance = getattr(instance, key)
+        if is_dataclass(instance):
+            continue
+        else:
+            raise ValueError(
+                f"Expected attribute '{key}' to be a dataclass instance but got '{type(key)}'"
+            )
+
+    attr = keys[-1]
+    value = parse_value(value)
+    old_value = getattr(instance, attr)
+    if type(value) != type(old_value):
+        raise ValueError(
+            f"Expected attribute to be '{type(old_value)}' but got '{type(value)}'"
+        )
+
+    setattr(instance, attr, value)
+
+
+def update_config(config: Config, key_value_pairs: list[str]) -> Config:
+    """Updates the configuration using the command-line argumments"""
 
     for pair in key_value_pairs:
-        key, value = pair.split("=")
-        value = parse_value(value)
-        keys = key.split(".")
-        current_config = config
-        for depth, k in enumerate(keys[:-1]):
-            if not isinstance(current_config, dict) and k not in current_config:
-                raise ValueError(
-                    f"Could not find Key '{k}' in '{key}' in configuration at depth {depth}"
-                )
-            current_config = current_config[k]
-        last_key = keys[-1]
-        if last_key not in current_config:
-            raise ValueError(
-                f"Could not find Key '{k}' in '{key}' in configuration at depth {depth}"
-            )
-        if type(current_config[last_key]) != type(value):
-            raise ValueError(
-                f"Cannot replace '{key}' with type {type(current_config[last_key])} with type {type(value)}"
-            )
-        current_config[last_key] = value
-        logging.warning(f"Updating '{key}' to be '{value}'")
+        path, value = pair.split("=", 1)
+        keys = path.split(".")
+        set_value(config, keys, value)
 
     return config
