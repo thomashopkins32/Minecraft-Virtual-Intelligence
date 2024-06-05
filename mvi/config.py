@@ -136,13 +136,11 @@ def parse_value(value: str) -> Any:
     return yaml.load(value, Loader=yaml.SafeLoader)
 
 
-def set_value(instance: Any, keys: list[str], value: Any) -> None:
+def _set_value(instance: Any, keys: list[str], value: Any) -> None:
 
     for key in keys[:-1]:
         instance = getattr(instance, key)
-        if is_dataclass(instance):
-            continue
-        else:
+        if not is_dataclass(instance):
             raise ValueError(
                 f"Expected attribute '{key}' to be a dataclass instance but got '{type(key)}'"
             )
@@ -164,6 +162,6 @@ def update_config(config: Config, key_value_pairs: list[str]) -> Config:
     for pair in key_value_pairs:
         path, value = pair.split("=", 1)
         keys = path.split(".")
-        set_value(config, keys, value)
+        _set_value(config, keys, value)
 
     return config

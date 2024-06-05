@@ -6,6 +6,7 @@ import torch.optim as optim
 
 from mvi.agent.agent import AgentV1
 from mvi.utils import sample_multinomial, sample_guassian
+from mvi.config import PPOConfig
 
 
 class PPO:
@@ -14,48 +15,33 @@ class PPO:
     def __init__(
         self,
         agent: AgentV1,
-        clip_ratio: float = 0.2,
-        target_kl: float = 0.01,
-        actor_lr: float = 3e-4,
-        critic_lr: float = 1e-3,
-        train_actor_iters: int = 80,
-        train_critic_iters: int = 80,
+        config: PPOConfig
     ):
         """
         Parameters
         ----------
         agent : AgentV1
             Minecraft agent model used as the actor and critic
-        clip_ratio : float, optional
-            Maximum allowed divergence of the new policy from the old policy in the objective function (aka epsilon)
-        target_kl : float, optional
-            Target KL divergence for policy updates; used in model selection (early stopping)
-        actor_lr : float, optional
-            Learning rate for the actor module
-        critic_lr : float, optional
-            Learning rate for the critic module
-        train_actor_iters : int, optional
-            Number of iterations to train the actor per epoch
-        train_critic_iters : int, optional
-            Number of iterations to train the critic per epoch
+        config : PPOConfig
+            Configuration for the PPO algorithm
         """
         # Environment & Agent
         self.agent = agent
 
         # Training duration
-        self.train_actor_iters = train_actor_iters
-        self.train_critic_iters = train_critic_iters
+        self.train_actor_iters = config.train_actor_iters
+        self.train_critic_iters = config.train_critic_iters
 
         # Learning hyperparameters
-        self.clip_ratio = clip_ratio
-        self.target_kl = target_kl
+        self.clip_ratio = config.clip_ratio
+        self.target_kl = config.target_kl
         self.actor_optim = optim.Adam(
             chain(self.agent.vision.parameters(), self.agent.affector.parameters()),
-            lr=actor_lr,
+            lr=config.actor_lr,
         )
         self.critic_optim = optim.Adam(
             chain(self.agent.vision.parameters(), self.agent.reasoner.parameters()),
-            lr=critic_lr,
+            lr=config.critic_lr,
         )
 
     def _compute_actor_loss(
