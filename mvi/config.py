@@ -1,6 +1,7 @@
+from collections.abc import Iterable
 from dataclasses import dataclass, is_dataclass
 import argparse
-from typing import Any, Tuple
+from typing import Any
 
 import yaml
 from dacite import from_dict
@@ -13,13 +14,13 @@ class EngineConfig:
 
     Attributes
     ----------
-    image_size : Tuple[int, int], optional
+    image_size : tuple[int, int], optional
         Height and width for Minecraft rendered images
     max_steps : int, optional
         Total number of environment steps before program termination
     max_buffer_size : int, optional
         Trajectory buffer capacity prior to model updates
-    roi_shape : Tuple[int, int], optional
+    roi_shape : tuple[int, int], optional
         Height and width of region of interest for visual perception
     discount_factor : float, optional
         Discount factor for calculating rewards
@@ -27,10 +28,10 @@ class EngineConfig:
         Discount factor for Generalized Advantage Estimation
     """
 
-    image_size: Tuple[int, int] = (160, 256)
+    image_size: tuple[int, int] = (160, 256)
     max_steps: int = 10_000
     max_buffer_size: int = 50
-    roi_shape: Tuple[int, int] = (32, 32)
+    roi_shape: tuple[int, int] = (32, 32)
     discount_factor: float = 0.99
     gae_discount_factor: float = 0.97
 
@@ -83,7 +84,11 @@ class Config:
 
 def get_config() -> Config:
     arguments = parse_arguments()
-    config = parse_config(arguments.file)
+    if arguments.file is not None:
+        config = parse_config(arguments.file)
+    else:
+        config = Config(engine=EngineConfig(), ppo=PPOConfig())
+    update_config(config, arguments.key_value_pairs)
     return config
 
 
@@ -121,12 +126,9 @@ def parse_config(yaml_path: str) -> Config:
     Config
         The current configuration
     """
-    if yaml_path is None:
-        config = Config()
-    else:
-        with open(yaml_path, "r") as fp:
-            config_dict = yaml.safe_load(fp)
-        config = from_dict(data_class=Config, data=config_dict)
+    with open(yaml_path, "r") as fp:
+        config_dict = yaml.load(fp, yaml.Loader)
+    config = from_dict(data_class=Config, data=config_dict)
 
     return config
 
@@ -148,12 +150,26 @@ def _set_value(instance: Any, keys: list[str], value: Any) -> None:
     attr = keys[-1]
     value = parse_value(value)
     old_value = getattr(instance, attr)
-    if type(value) != type(old_value):
+
+    # Type mismatch based on raw types or being iterables
+    if (
+        (
+            not isinstance(value, Iterable)
+            and not isinstance(old_value, Iterable)
+            and type(value) != type(old_value)
+        )
+        or (isinstance(value, Iterable) and not isinstance(old_value, Iterable))
+        or (not isinstance(value, Iterable) and isinstance(old_value, Iterable))
+    ):
         raise ValueError(
             f"Expected attribute to be '{type(old_value)}' but got '{type(value)}'"
         )
 
-    setattr(instance, attr, value)
+    # Need to handle special cases of tuples
+    if isinstance(old_value, tuple):
+        setattr(instance, attr, tuple(value))
+    else:
+        setattr(instance, attr, value)
 
 
 def update_config(config: Config, key_value_pairs: list[str]) -> Config:

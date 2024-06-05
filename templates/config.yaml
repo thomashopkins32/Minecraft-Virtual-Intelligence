@@ -2,16 +2,16 @@
 # See dataclass definitions for the full specification
 
 # Engine settings
-Engine:
-  image_size: [160, 256]
+engine:
+  image_size: !!python/tuple [160, 256]
   max_steps: 10000
   max_buffer_size: 50
-  roi_shape: [32, 32]
+  roi_shape: !!python/tuple [32, 32]
   discount_factor: 0.99
   gae_discount_factor: 0.97
 
 # PPO settings
-PPO:
+ppo:
   clip_ratio: 0.2 # Gradient clipping ratio
   target_kl: 0.01 # Target KL-divergence for model selection
   actor_lr: 3.0e-4 # Actor learning rate
