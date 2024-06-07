@@ -62,13 +62,15 @@ def test_update_config():
 
     # Other - empty list
     config = update_config(example_config, [])
-    # TODO: Write comparison== for Config
+
+    assert example_config == config
 
     # Valid update - replace values
     to_update = ["engine.image_size=[200,200]", "ppo.clip_ratio=3.0"]
     config = update_config(example_config, to_update)
     assert config.engine.image_size == (200, 200)
     assert config.ppo.clip_ratio == 3.0
+    assert example_config != config
 
     # Invalid update - type mismatch
     to_update = ["engine.image_size=10"]
