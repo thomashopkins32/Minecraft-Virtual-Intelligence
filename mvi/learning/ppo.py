@@ -91,13 +91,7 @@ class PPO:
             self.critic_optim.step()
         self.agent.eval()
 
-    def _save_models(self):
-        """Saves model checkpoints to the current working directory"""
-        # TODO
-        raise NotImplementedError
-
     def update(self, data: Dict[str, Any]) -> None:
         """Updates the actor and critic models given the a dataset of trajectories"""
         self._update_actor(data)
         self._update_critic(data)
-        self._save_models()
