@@ -11,10 +11,7 @@ from tests.helper import MockEnv
 def ppo_module():
     env = MockEnv()
     agent = AgentV1(env.action_space)
-    return PPO(
-        agent,
-        PPOConfig(train_actor_iters=2, train_critic_iters=2)
-    )
+    return PPO(agent, PPOConfig(train_actor_iters=2, train_critic_iters=2))
 
 
 def test_ppo_update(ppo_module: PPO) -> None:
