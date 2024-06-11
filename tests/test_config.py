@@ -1,10 +1,14 @@
 import os
+from dataclasses import asdict
+from copy import deepcopy
 
 import pytest
 import yaml
 
+from mvi.agent.agent import AgentV1
 from mvi.learning.ppo import PPO
 from mvi.config import parse_config, update_config, PPOConfig, EngineConfig, Config
+from tests.helper import ACTION_SPACE
 
 
 def test_ppo_config():
@@ -13,11 +17,15 @@ def test_ppo_config():
     template_path = os.path.join(project_root, "templates", "config.yaml")
 
     # Base template (expected values)
-    config_dict = yaml.safe_load(template_path)
+    with open(template_path, "r") as fp:
+        config_dict = yaml.load(fp, yaml.Loader)
 
     # Parsing
     config = parse_config(template_path)
-    ppo = PPO(None, None, config.ppo)
+    agent = AgentV1(ACTION_SPACE)
+    ppo = PPO(agent, config.ppo)
+
+    print(config_dict)
 
     # Comparison
     assert ppo.clip_ratio == config_dict["ppo"]["clip_ratio"]
@@ -33,7 +41,8 @@ def test_parse_config():
     template_path = os.path.join(project_root, "templates", "config.yaml")
 
     # Base template (expected values)
-    config_dict = yaml.safe_load(template_path)
+    with open(template_path, "r") as fp:
+        config_dict = yaml.load(fp, yaml.Loader)
 
     # Parsing
     config = parse_config(template_path)
@@ -58,26 +67,27 @@ def test_parse_config():
 
 
 def test_update_config():
-    example_config = Config(engine=EngineConfig(), ppo=PPOConfig())
+    config = Config(engine=EngineConfig(), ppo=PPOConfig())
 
     # Other - empty list
-    config = update_config(example_config, [])
+    before_change = deepcopy(config)
+    update_config(config, [])
 
-    assert example_config == config
+    assert asdict(before_change) == asdict(config)
 
     # Valid update - replace values
     to_update = ["engine.image_size=[200,200]", "ppo.clip_ratio=3.0"]
-    config = update_config(example_config, to_update)
+    update_config(config, to_update)
     assert config.engine.image_size == (200, 200)
     assert config.ppo.clip_ratio == 3.0
-    assert example_config != config
+    assert asdict(before_change) != asdict(config)
 
     # Invalid update - type mismatch
     to_update = ["engine.image_size=10"]
     with pytest.raises(ValueError) as _:
-        config = update_config(example_config, to_update)
+        update_config(config, to_update)
 
     # Invalid update - key not found
     to_update = ["Test1"]
     with pytest.raises(ValueError) as _:
-        config = update_config(example_config, to_update)
+        update_config(config, to_update)

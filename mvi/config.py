@@ -172,12 +172,10 @@ def _set_value(instance: Any, keys: list[str], value: Any) -> None:
         setattr(instance, attr, value)
 
 
-def update_config(config: Config, key_value_pairs: list[str]) -> Config:
+def update_config(config: Config, key_value_pairs: list[str]) -> None:
     """Updates the configuration using the command-line argumments"""
 
     for pair in key_value_pairs:
         path, value = pair.split("=", 1)
         keys = path.split(".")
         _set_value(config, keys, value)
-
-    return config
