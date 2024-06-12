@@ -164,3 +164,7 @@ logs/
 
 # tensorboard logs
 runs/
+
+# VS Code extensions
+.vscode/
+**/.vscode/
