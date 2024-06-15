@@ -2,6 +2,7 @@ import pytest
 import torch
 from mvi.agent.agent import AgentV1
 from mvi.learning.ppo import PPO
+from mvi.config import PPOConfig
 
 from tests.helper import MockEnv
 
@@ -10,17 +11,20 @@ from tests.helper import MockEnv
 def ppo_module():
     env = MockEnv()
     agent = AgentV1(env.action_space)
-    return PPO(
-        env,
-        agent,
-        epochs=2,
-        steps_per_epoch=3,
-        train_actor_iters=2,
-        train_critic_iters=2,
-        save_freq=100,
-    )
+    return PPO(agent, PPOConfig(train_actor_iters=2, train_critic_iters=2))
 
 
-def test_ppo_run(ppo_module):
+def test_ppo_update(ppo_module: PPO) -> None:
     torch.autograd.anomaly_mode.set_detect_anomaly(True)
-    ppo_module.run()
+
+    bs = 3
+    data = {
+        "env_observations": torch.zeros((bs, 3, 160, 256), dtype=torch.float),
+        "roi_observations": torch.zeros((bs, 3, 20, 20), dtype=torch.float),
+        "actions": torch.zeros((bs, 10), dtype=torch.long),
+        "returns": torch.zeros((bs, 1), dtype=torch.float),
+        "advantages": torch.zeros((bs, 1), dtype=torch.float),
+        "log_probs": torch.zeros((bs, 1), dtype=torch.float),
+    }
+
+    ppo_module.update(data)

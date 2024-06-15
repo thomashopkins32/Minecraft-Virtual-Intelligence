@@ -6,61 +6,38 @@ import torch.optim as optim
 
 from mvi.agent.agent import AgentV1
 from mvi.utils import joint_logp_action
+from mvi.config import PPOConfig
 
 
 class PPO:
     """Inspired by https://github.com/openai/spinningup/blob/master/spinup/algos/pytorch/ppo/ppo.py"""
 
-    def __init__(
-        self,
-        agent: AgentV1, # TODO: decide if this should be the full agent or split into actor & critic
-        clip_ratio: float = 0.2,
-        target_kl: float = 0.01,
-        actor_lr: float = 3e-4,
-        critic_lr: float = 1e-3,
-        train_actor_iters: int = 80,
-        train_critic_iters: int = 80,
-        save_freq: int = 10,
-    ):
+    def __init__(self, agent: AgentV1, config: PPOConfig):
         """
         Parameters
         ----------
         agent : AgentV1
-            Agent that contains the actor and critic modules
-        clip_ratio : float, optional
-            Maximum allowed divergence of the new policy from the old policy in the objective function (aka epsilon)
-        target_kl : float, optional
-            Target KL divergence for policy updates; used in model selection (early stopping)
-        actor_lr : float, optional
-            Learning rate for the actor module
-        critic_lr : float, optional
-            Learning rate for the critic module
-        train_actor_iters : int, optional
-            Number of iterations to train the actor per epoch
-        train_critic_iters : int, optional
-            Number of iterations to train the critic per epoch
-        save_freq : int, optional
-            Rate in terms of number of epochs that the actor and critic models are saved to disk
+            Minecraft agent model used as the actor and critic
+        config : PPOConfig
+            Configuration for the PPO algorithm
         """
         # Environment & Agent
         self.agent = agent
 
         # Training duration
-        self.train_actor_iters = train_actor_iters
-        self.train_critic_iters = train_critic_iters
+        self.train_actor_iters = config.train_actor_iters
+        self.train_critic_iters = config.train_critic_iters
 
         # Learning hyperparameters
-        self.clip_ratio = clip_ratio
-        self.target_kl = target_kl
-
-        # Optimizers
+        self.clip_ratio = config.clip_ratio
+        self.target_kl = config.target_kl
         self.actor_optim = optim.Adam(
             chain(self.agent.vision.parameters(), self.agent.affector.parameters()),
-            lr=actor_lr,
+            lr=config.actor_lr,
         )
         self.critic_optim = optim.Adam(
             chain(self.agent.vision.parameters(), self.agent.reasoner.parameters()),
-            lr=critic_lr,
+            lr=config.critic_lr,
         )
 
     def _compute_actor_loss(
@@ -114,6 +91,7 @@ class PPO:
             self.critic_optim.step()
         self.agent.eval()
 
-    def train(self, data: Dict[str, Any]) -> None:
+    def update(self, data: Dict[str, Any]) -> None:
+        """Updates the actor and critic models given the a dataset of trajectories"""
         self._update_actor(data)
         self._update_critic(data)

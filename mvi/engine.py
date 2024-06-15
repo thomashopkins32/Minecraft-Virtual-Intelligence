@@ -1,44 +1,42 @@
-from typing import Tuple, Dict, Any
-
 import torch
-from torchvision.transforms.functional import center_crop
-import minedojo # type: ignore
+from torchvision.transforms.functional import crop, center_crop  # type: ignore
+import minedojo  # type: ignore
 
-from mvi.memory.trajectory import TrajectoryBuffer
 from mvi.agent.agent import AgentV1
+from mvi.learning.ppo import PPO
+from mvi.config import get_config
+from mvi.memory.trajectory import PPOTrajectory
+from mvi.utils import sample_action
 
 
-def run(
-    roi_shape: Tuple[int, int] = (32, 32),
-    epochs: int = 50,
-    steps_per_epoch: int = 4000,
-    discount_factor: float = 0.99,
-    gae_discount_factor: float = 0.97,
-    save_freq: int = 10,
-    **ppo_kwargs: Dict[str, Any],
-):
+def run() -> None:
     """
-    Main entry point: runs the Minecraft environment with the virtual intelligence in it
+    Entry-point for the project.
+
+    Runs the Minecraft simulation with the virtual intelligence in it.
     """
-    env = minedojo.make(task_id="open-ended", image_size=(160, 256))
+
+    # Setup
+    config = get_config()
+    engine_config = config.engine
+    env = minedojo.make(task_id="open-ended", image_size=engine_config.image_size)
     agent = AgentV1(env.action_space)
-    ppo = PPO(env, agent, **config["PPO"])
+    ppo = PPO(agent, config.ppo)
 
-    for e in range(epochs):
-        trajectory_buffer = TrajectoryBuffer(
-            max_buffer_size=steps_per_epoch,
-            discount_factor=discount_factor,
-            gae_discount_factor=gae_discount_factor,
+    # Environment Loop
+    obs = torch.tensor(env.reset()["rgb"].copy(), dtype=torch.float).unsqueeze(0)
+    roi_obs = center_crop(obs, engine_config.roi_shape)
+    for s in range(engine_config.max_steps):
+        trajectory_buffer = PPOTrajectory(
+            max_buffer_size=engine_config.max_buffer_size,
+            discount_factor=engine_config.discount_factor,
+            gae_discount_factor=engine_config.gae_discount_factor,
         )
-        obs = torch.tensor(
-            env.reset()["rgb"].copy(), dtype=torch.float
-        ).unsqueeze(0)
-        roi_obs = center_crop(obs, roi_shape)
         t_return = 0.0
-        for t in range(steps_per_epoch):
+        for t in range(engine_config.max_buffer_size):
             with torch.no_grad():
                 a, v = agent(obs, roi_obs)
-            action, logp_action = _sample_action(a)
+            action, logp_action = sample_action(a)
             env_action = action[:-2].numpy()  # Don't include the region of interest
             roi_action = action[-2:]
             next_obs, reward, _, _ = env.step(env_action)
@@ -52,17 +50,20 @@ def run(
                 # Sum the log probability to get the joint probability of selecting the full action
                 logp_action.sum(),
             )
-            obs = torch.tensor(next_obs["rgb"].copy(), dtype=torch.float).unsqueeze(
-                0
-            )
+            obs = torch.tensor(next_obs["rgb"].copy(), dtype=torch.float).unsqueeze(0)
             roi_obs = crop(
                 obs,
                 roi_action[0],
                 roi_action[1],
-                roi_shape[0],
-                roi_shape[1],
+                engine_config.roi_shape[0],
+                engine_config.roi_shape[1],
             )
         _, last_v = agent(obs, roi_obs)
         data = trajectory_buffer.get(last_v)
-        _update_actor(data, actor_optim)
-        _update_critic(data, critic_optim)
+
+        # Update models
+        ppo.update(data)
+
+
+if __name__ == "__main__":
+    run()
