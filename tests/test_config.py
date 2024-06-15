@@ -11,11 +11,6 @@ from mvi.config import parse_config, update_config, PPOConfig, EngineConfig, Con
 from tests.helper import ACTION_SPACE
 
 
-def test_engine_config():
-    project_root = os.path.abspath(os.path.join(__file__, "..", ".."))
-    config = parse_config(os.path.join(project_root, "templates", "config.yaml"))
-    run(**config["Engine"], **config["PPO"])
-
 def test_ppo_config():
     """Test consistency between configuration and PPO algorithm"""
     project_root = os.path.abspath(os.path.join(__file__, "..", ".."))

@@ -2,15 +2,15 @@ import pytest
 import numpy as np
 import torch
 
-from mvi.memory.trajectory import PPOTrajectory
+from mvi.memory.trajectory import TrajectoryBuffer
 
 
 @pytest.fixture()
-def ppo_trajectory():
-    return PPOTrajectory(10, discount_factor=0.5, gae_discount_factor=0.5)
+def trajectory_buffer() -> TrajectoryBuffer:
+    return TrajectoryBuffer(10, discount_factor=0.5, gae_discount_factor=0.5)
 
 
-def test_ppo_trajectory(ppo_trajectory):
+def test_ppo_trajectory(trajectory_buffer: TrajectoryBuffer):
     obs = (
         torch.randn((3, 32, 32), dtype=torch.float),
         torch.randn((3, 5, 5), dtype=torch.float),
@@ -20,9 +20,9 @@ def test_ppo_trajectory(ppo_trajectory):
     value = 10.0
     log_prob = torch.zeros((10,))
     for _ in range(10):
-        ppo_trajectory.store(obs, action, reward, value, log_prob)
+        trajectory_buffer.store(obs, action, reward, value, log_prob)
 
-    result = ppo_trajectory.get(last_value=2.5)
+    result = trajectory_buffer.get(last_value=2.5)
     env_obs = result["env_observations"]
     roi_obs = result["roi_observations"]
     actions = result["actions"]
