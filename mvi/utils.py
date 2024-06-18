@@ -197,34 +197,33 @@ def joint_logp_action(
     Returns
     -------
     torch.Tensor
-        Log probabilities of sampling the corresponding action. To get the joint log-probability of the
-        action, you can `.sum()` this tensor.
+        Join log-probability of taking the action given the distributions of each component
     """
     long_actions_taken = actions_taken.long()
     joint_logp = (  # longitudinal movement
-        action_dists[0].gather(1, long_actions_taken[:, 0].unsqueeze(-1)).squeeze()
+        action_dists[0].gather(1, long_actions_taken[:, 0].unsqueeze(-1)).squeeze().log()
     )
     # Avoid += here as it is an in-place operation (which is bad for autograd)
     joint_logp = joint_logp + (  # lateral movement
-        action_dists[1].gather(1, long_actions_taken[:, 1].unsqueeze(-1)).squeeze()
+        action_dists[1].gather(1, long_actions_taken[:, 1].unsqueeze(-1)).squeeze().log()
     )
     joint_logp = joint_logp + (  # vertical movement
-        action_dists[2].gather(1, long_actions_taken[:, 2].unsqueeze(-1)).squeeze()
+        action_dists[2].gather(1, long_actions_taken[:, 2].unsqueeze(-1)).squeeze().log()
     )
     joint_logp = joint_logp + (  # pitch movement
-        action_dists[3].gather(1, long_actions_taken[:, 3].unsqueeze(-1)).squeeze()
+        action_dists[3].gather(1, long_actions_taken[:, 3].unsqueeze(-1)).squeeze().log()
     )
     joint_logp = joint_logp + (  # yaw movement
-        action_dists[4].gather(1, long_actions_taken[:, 4].unsqueeze(-1)).squeeze()
+        action_dists[4].gather(1, long_actions_taken[:, 4].unsqueeze(-1)).squeeze().log()
     )
     joint_logp = joint_logp + (  # functional actions
-        action_dists[5].gather(1, long_actions_taken[:, 5].unsqueeze(-1)).squeeze()
+        action_dists[5].gather(1, long_actions_taken[:, 5].unsqueeze(-1)).squeeze().log()
     )
     joint_logp = joint_logp + (  # crafting actions
-        action_dists[6].gather(1, long_actions_taken[:, 6].unsqueeze(-1)).squeeze()
+        action_dists[6].gather(1, long_actions_taken[:, 6].unsqueeze(-1)).squeeze().log()
     )
     joint_logp = joint_logp + (  # inventory actions
-        action_dists[7].gather(1, long_actions_taken[:, 7].unsqueeze(-1)).squeeze()
+        action_dists[7].gather(1, long_actions_taken[:, 7].unsqueeze(-1)).squeeze().log()
     )
     # Focus actions
     x_roi_dist = torch.distributions.Normal(
