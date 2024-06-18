@@ -6,7 +6,7 @@ import torch
 from mvi.utils import discount_cumsum, statistics
 
 
-class PPOTrajectory:
+class TrajectoryBuffer:
     """
     Inspired by https://github.com/openai/spinningup/blob/master/spinup/algos/pytorch/ppo/ppo.py
     Used to store a single trajectory.
