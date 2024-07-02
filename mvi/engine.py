@@ -59,10 +59,10 @@ def run() -> None:
                 engine_config.roi_shape[1],
             )
         _, last_v = agent(obs, roi_obs)
-        data = trajectory_buffer.get(last_v)
+        trajectory_buffer.finalize_trajectory(last_v)
 
         # Update models
-        ppo.update(data)
+        ppo.update(trajectory_buffer)
 
 
 if __name__ == "__main__":
