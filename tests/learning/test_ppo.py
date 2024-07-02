@@ -22,10 +22,14 @@ def test_ppo_update(ppo_module: PPO) -> None:
     trajectory = PPOTrajectory(max_buffer_size=buffer_size)
     for _ in range(buffer_size):
         trajectory.store(
-            (torch.zeros((3, 160, 256), dtype=torch.float), torch.zeros((3, 20, 20), dtype=torch.float)),
+            (
+                torch.zeros((3, 160, 256), dtype=torch.float),
+                torch.zeros((3, 20, 20), dtype=torch.float),
+            ),
             torch.zeros((10,), dtype=torch.long),
             0.0,
             0.0,
-            torch.ones((1,), dtype=torch.float))
+            torch.ones((1,), dtype=torch.float),
+        )
     trajectory.finalize_trajectory(0.0)
     ppo_module.update(trajectory)

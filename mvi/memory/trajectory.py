@@ -170,5 +170,5 @@ class PPOTrajectory:
 
         start_idx = 0
         while start_idx < size:
-            yield self._get_sample(indices[start_idx:start_idx + batch_size])
+            yield self._get_sample(indices[start_idx : start_idx + batch_size])
             start_idx += batch_size
