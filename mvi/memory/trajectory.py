@@ -126,8 +126,8 @@ class TrajectoryBuffer:
         self.actions = torch.stack(self.actions_buffer)
         self.log_probabilities = torch.stack(self.log_probs_buffer)
 
-    def _get_sample(self, indices: np.array) -> PPOSample:
-        return PPOSample(
+    def _get_sample(self, indices: np.array) -> TrajectorySample:
+        return TrajectorySample(
             env_observations=self.env_observations[indices],
             roi_observations=self.roi_observations[indices],
             actions=self.actions[indices],
@@ -138,7 +138,7 @@ class TrajectoryBuffer:
 
     def get(
         self, shuffle: bool = False, batch_size: Union[int, None] = None
-    ) -> Generator[PPOSample, None, None]:
+    ) -> Generator[TrajectorySample, None, None]:
         """
         Computes the advantages and reward-to-go then returns the data from the trajectory.
 

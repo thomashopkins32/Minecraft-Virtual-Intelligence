@@ -22,9 +22,9 @@ def test_ppo_trajectory(trajectory_buffer: TrajectoryBuffer):
     for _ in range(10):
         trajectory_buffer.store(obs, action, reward, value, log_prob)
 
-    ppo_trajectory.finalize_trajectory(last_value=2.5)
+    trajectory_buffer.finalize_trajectory(last_value=2.5)
 
-    result = list(ppo_trajectory.get(shuffle=False, batch_size=None))[0]
+    result = list(trajectory_buffer.get(shuffle=False, batch_size=None))[0]
     env_obs = result.env_observations
     roi_obs = result.roi_observations
     actions = result.actions
