@@ -1,5 +1,3 @@
-from typing import Tuple
-
 import torch
 import torch.nn as nn
 from gymnasium.spaces import MultiDiscrete
@@ -53,7 +51,7 @@ class LinearAffector(nn.Module):
         self.softplus = nn.Softplus()
         self.action_space = action_space
 
-    def forward(self, x: torch.Tensor) -> Tuple[
+    def forward(self, x: torch.Tensor) -> tuple[
         torch.Tensor,
         torch.Tensor,
         torch.Tensor,
