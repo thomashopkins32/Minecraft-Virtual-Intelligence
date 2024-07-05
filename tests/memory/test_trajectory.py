@@ -22,13 +22,15 @@ def test_ppo_trajectory(trajectory_buffer: TrajectoryBuffer):
     for _ in range(10):
         trajectory_buffer.store(obs, action, reward, value, log_prob)
 
-    result = trajectory_buffer.get(last_value=2.5)
-    env_obs = result["env_observations"]
-    roi_obs = result["roi_observations"]
-    actions = result["actions"]
-    returns = result["returns"]
-    advantages = result["advantages"]
-    log_probs = result["log_probs"]
+    ppo_trajectory.finalize_trajectory(last_value=2.5)
+
+    result = list(ppo_trajectory.get(shuffle=False, batch_size=None))[0]
+    env_obs = result.env_observations
+    roi_obs = result.roi_observations
+    actions = result.actions
+    returns = result.returns
+    advantages = result.advantages
+    log_probs = result.log_probabilities
 
     assert type(env_obs) == torch.Tensor
     assert type(roi_obs) == torch.Tensor

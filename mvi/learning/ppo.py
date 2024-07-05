@@ -7,6 +7,7 @@ import torch.optim as optim
 from mvi.agent.agent import AgentV1
 from mvi.utils import joint_logp_action
 from mvi.config import PPOConfig
+from mvi.memory.trajectory import PPOTrajectory, PPOSample
 
 
 class PPO:
@@ -40,15 +41,13 @@ class PPO:
             lr=config.critic_lr,
         )
 
-    def _compute_actor_loss(
-        self, data: Dict[str, Any]
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+    def _compute_actor_loss(self, data: PPOSample) -> Tuple[torch.Tensor, torch.Tensor]:
         env_obs, roi_obs, act, adv, logp_old = (
-            data["env_observations"],
-            data["roi_observations"],
-            data["actions"],
-            data["advantages"],
-            data["log_probs"],
+            data.env_observations,
+            data.roi_observations,
+            data.actions,
+            data.advantages,
+            data.log_probabilities,
         )
 
         action_dist, _ = self.agent(env_obs, roi_obs)
@@ -61,11 +60,14 @@ class PPO:
 
         return loss, kl
 
-    def _update_actor(self, data: Dict[str, Any]) -> None:
+    def _update_actor(self, data: PPOTrajectory) -> None:
         self.agent.train()
-        for _ in range(self.train_actor_iters):
+        buffer_size = len(data)
+        for sample in data.get(
+            shuffle=True, batch_size=buffer_size // self.train_actor_iters
+        ):
             self.actor_optim.zero_grad()
-            loss, kl = self._compute_actor_loss(data)
+            loss, kl = self._compute_actor_loss(sample)
             if kl > 1.5 * self.target_kl:
                 # early stopping
                 break
@@ -73,25 +75,28 @@ class PPO:
             self.actor_optim.step()
         self.agent.eval()
 
-    def _compute_critic_loss(self, data: Dict[str, Any]) -> torch.Tensor:
+    def _compute_critic_loss(self, data: PPOSample) -> torch.Tensor:
         env_obs, roi_obs, ret = (
-            data["env_observations"],
-            data["roi_observations"],
-            data["returns"],
+            data.env_observations,
+            data.roi_observations,
+            data.returns,
         )
         _, v = self.agent(env_obs, roi_obs)
         return ((v - ret) ** 2).mean()
 
-    def _update_critic(self, data: Dict[str, Any]) -> None:
+    def _update_critic(self, data: PPOTrajectory) -> None:
         self.agent.train()
-        for _ in range(self.train_critic_iters):
+        buffer_size = len(data)
+        for sample in data.get(
+            shuffle=True, batch_size=buffer_size // self.train_critic_iters
+        ):
             self.critic_optim.zero_grad()
-            loss = self._compute_critic_loss(data)
+            loss = self._compute_critic_loss(sample)
             loss.backward()
             self.critic_optim.step()
         self.agent.eval()
 
-    def update(self, data: Dict[str, Any]) -> None:
+    def update(self, data: PPOTrajectory) -> None:
         """Updates the actor and critic models given the a dataset of trajectories"""
         self._update_actor(data)
         self._update_critic(data)
