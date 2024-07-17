@@ -1,9 +1,9 @@
 import torch.nn as nn
 
 
-class LinearReasoner(nn.Module):
+class LinearCritic(nn.Module):
     """
-    Feed-forward reasoner (critic) module.
+    Feed-forward critic module.
 
     This module estimates future reward for a given input.
     """
