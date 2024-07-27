@@ -1,4 +1,3 @@
-from typing import Dict, Any, Tuple
 from itertools import chain
 
 import torch
@@ -7,7 +6,7 @@ import torch.optim as optim
 from mvi.agent.agent import AgentV1
 from mvi.utils import joint_logp_action
 from mvi.config import PPOConfig
-from mvi.memory.trajectory import PPOTrajectory, PPOSample
+from mvi.memory.trajectory import TrajectoryBuffer, TrajectorySample
 
 
 class PPO:
@@ -41,7 +40,9 @@ class PPO:
             lr=config.critic_lr,
         )
 
-    def _compute_actor_loss(self, data: PPOSample) -> Tuple[torch.Tensor, torch.Tensor]:
+    def _compute_actor_loss(
+        self, data: TrajectorySample
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         env_obs, roi_obs, act, adv, logp_old = (
             data.env_observations,
             data.roi_observations,
@@ -60,7 +61,7 @@ class PPO:
 
         return loss, kl
 
-    def _update_actor(self, data: PPOTrajectory) -> None:
+    def _update_actor(self, data: TrajectoryBuffer) -> None:
         self.agent.train()
         buffer_size = len(data)
         for sample in data.get(
@@ -75,7 +76,7 @@ class PPO:
             self.actor_optim.step()
         self.agent.eval()
 
-    def _compute_critic_loss(self, data: PPOSample) -> torch.Tensor:
+    def _compute_critic_loss(self, data: TrajectorySample) -> torch.Tensor:
         env_obs, roi_obs, ret = (
             data.env_observations,
             data.roi_observations,
@@ -84,7 +85,7 @@ class PPO:
         _, v = self.agent(env_obs, roi_obs)
         return ((v - ret) ** 2).mean()
 
-    def _update_critic(self, data: PPOTrajectory) -> None:
+    def _update_critic(self, data: TrajectoryBuffer) -> None:
         self.agent.train()
         buffer_size = len(data)
         for sample in data.get(
@@ -96,7 +97,7 @@ class PPO:
             self.critic_optim.step()
         self.agent.eval()
 
-    def update(self, data: PPOTrajectory) -> None:
+    def update(self, data: TrajectoryBuffer) -> None:
         """Updates the actor and critic models given the a dataset of trajectories"""
         self._update_actor(data)
         self._update_critic(data)

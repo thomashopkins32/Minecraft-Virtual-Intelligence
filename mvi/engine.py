@@ -5,7 +5,7 @@ import minedojo  # type: ignore
 from mvi.agent.agent import AgentV1
 from mvi.learning.ppo import PPO
 from mvi.config import get_config
-from mvi.memory.trajectory import PPOTrajectory
+from mvi.memory.trajectory import TrajectoryBuffer
 from mvi.utils import sample_action
 
 
@@ -21,13 +21,25 @@ def run() -> None:
     engine_config = config.engine
     env = minedojo.make(task_id="open-ended", image_size=engine_config.image_size)
     agent = AgentV1(env.action_space)
+
+    obs = torch.tensor(env.reset()["rgb"].copy(), dtype=torch.float).unsqueeze(0)
+    for s in range(engine_config.max_steps):
+        t_return = 0.0
+        for t in range(engine_config.max_buffer_size):
+            action = agent(obs)
+            next_obs, reward, _, _ = env.step(action)
+            t_return += reward
+            obs = torch.tensor(next_obs["rgb"].copy(), dtype=torch.float).unsqueeze(0)
+    
+    
+    """
     ppo = PPO(agent, config.ppo)
 
     # Environment Loop
     obs = torch.tensor(env.reset()["rgb"].copy(), dtype=torch.float).unsqueeze(0)
     roi_obs = center_crop(obs, engine_config.roi_shape)
     for s in range(engine_config.max_steps):
-        trajectory_buffer = PPOTrajectory(
+        trajectory_buffer = TrajectoryBuffer(
             max_buffer_size=engine_config.max_buffer_size,
             discount_factor=engine_config.discount_factor,
             gae_discount_factor=engine_config.gae_discount_factor,
@@ -63,6 +75,7 @@ def run() -> None:
 
         # Update models
         ppo.update(trajectory_buffer)
+    """
 
 
 if __name__ == "__main__":

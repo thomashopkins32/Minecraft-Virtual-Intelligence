@@ -9,7 +9,7 @@ from mvi.utils import discount_cumsum, statistics
 
 
 @dataclass
-class PPOSample:
+class TrajectorySample:
     env_observations: torch.Tensor
     roi_observations: torch.Tensor
     actions: torch.Tensor
@@ -18,7 +18,7 @@ class PPOSample:
     log_probabilities: torch.Tensor
 
 
-class PPOTrajectory:
+class TrajectoryBuffer:
     """
     Inspired by https://github.com/openai/spinningup/blob/master/spinup/algos/pytorch/ppo/ppo.py
     Used to store a single trajectory.
@@ -41,6 +41,13 @@ class PPOTrajectory:
 
     def __len__(self):
         return len(self.observations_buffer)
+
+    def reset(self) -> None:
+        self.observations_buffer = []
+        self.actions_buffer = []
+        self.rewards_buffer = []
+        self.values_buffer = []
+        self.log_probs_buffer = []
 
     def store(
         self,
@@ -126,8 +133,8 @@ class PPOTrajectory:
         self.actions = torch.stack(self.actions_buffer)
         self.log_probabilities = torch.stack(self.log_probs_buffer)
 
-    def _get_sample(self, indices: np.array) -> PPOSample:
-        return PPOSample(
+    def _get_sample(self, indices: np.array) -> TrajectorySample:
+        return TrajectorySample(
             env_observations=self.env_observations[indices],
             roi_observations=self.roi_observations[indices],
             actions=self.actions[indices],
@@ -138,7 +145,7 @@ class PPOTrajectory:
 
     def get(
         self, shuffle: bool = False, batch_size: Union[int, None] = None
-    ) -> Generator[PPOSample, None, None]:
+    ) -> Generator[TrajectorySample, None, None]:
         """
         Computes the advantages and reward-to-go then returns the data from the trajectory.
 
