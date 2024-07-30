@@ -128,7 +128,7 @@ def sample_action(
         torch.Tensor,
         torch.Tensor,
     ]
-) -> Tuple[torch.Tensor, torch.Tensor]:
+) -> Tuple[torch.Tensor, float]:
     """
     Samples actions from the various distributions and combines them into an action tensor.
     Outputs the action tensor and a logp tensor showing the log probability of taking that action.
@@ -142,9 +142,8 @@ def sample_action(
     -------
     torch.Tensor
         Action tensor representing the items sampled from the various distributions
-    torch.Tensor
-        Log probabilities of sampling the corresponding action. To get the joint log-probability of the
-        action, you can `.sum()` this tensor.
+    float
+        Log probability of sampling the corresponding action
     """
     # Initialize action and log buffer
     action = torch.zeros((10,), dtype=torch.int)
@@ -165,7 +164,7 @@ def sample_action(
         action_dists[8][0, 1], action_dists[9][0, 1]
     )
 
-    return action, logp_action
+    return action, logp_action.sum()
 
 
 def joint_logp_action(

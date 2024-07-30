@@ -33,7 +33,8 @@ class TrajectoryBuffer:
         self.max_buffer_size = max_buffer_size
         self.discount_factor = discount_factor
         self.gae_discount_factor = gae_discount_factor
-        self.observations_buffer: list[Tuple[torch.Tensor, torch.Tensor]] = []
+        self.observations_buffer: list[torch.Tensor] = []
+        self.roi_buffer = list[torch.Tensor] = []
         self.actions_buffer: list[torch.Tensor] = []
         self.rewards_buffer: list[float] = []
         self.values_buffer: list[float] = []
@@ -48,6 +49,15 @@ class TrajectoryBuffer:
         self.rewards_buffer = []
         self.values_buffer = []
         self.log_probs_buffer = []
+
+    def store_observation(self, obs: torch.Tensor) -> None:
+        self.observations_buffer.append(obs)
+    def store_region_of_interest(self, roi_obs: torch.Tensor) -> None:
+        self.observations_buffer.append(roi_obs)
+    def store_advantage(self, value: float, reward: float) -> None:
+        # TODO: compute advantage using value & reward
+        # TODO: have to access historical value & reward *or* historical deltas
+        self.advatages_buffer.append()
 
     def store(
         self,
@@ -126,9 +136,6 @@ class TrajectoryBuffer:
             discount_cumsum(self.rewards.numpy(), self.discount_factor)[:-1].copy()
         ).squeeze()
 
-        # Normalize advantages TODO: We may have to do this by the batch instead of overall
-        adv_mean, adv_std = statistics(advantages)
-        self.norm_advantages = (advantages - adv_mean) / adv_std
 
         self.actions = torch.stack(self.actions_buffer)
         self.log_probabilities = torch.stack(self.log_probs_buffer)
@@ -177,5 +184,8 @@ class TrajectoryBuffer:
 
         start_idx = 0
         while start_idx < size:
+            # Normalize advantages TODO: We may have to do this by the batch instead of overall
+            adv_mean, adv_std = statistics(advantages)
+            self.norm_advantages = (advantages - adv_mean) / adv_std
             yield self._get_sample(indices[start_idx : start_idx + batch_size])
             start_idx += batch_size
