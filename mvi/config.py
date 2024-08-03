@@ -18,22 +18,10 @@ class EngineConfig:
         Height and width for Minecraft rendered images
     max_steps : int, optional
         Total number of environment steps before program termination
-    max_buffer_size : int, optional
-        Trajectory buffer capacity prior to model updates
-    roi_shape : tuple[int, int], optional
-        Height and width of region of interest for visual perception
-    discount_factor : float, optional
-        Discount factor for calculating rewards
-    gae_discount_factor : float, optional
-        Discount factor for Generalized Advantage Estimation
     """
 
     image_size: tuple[int, int] = (160, 256)
     max_steps: int = 10_000
-    max_buffer_size: int = 50
-    roi_shape: tuple[int, int] = (32, 32)
-    discount_factor: float = 0.99
-    gae_discount_factor: float = 0.97
 
 
 @dataclass
@@ -66,6 +54,32 @@ class PPOConfig:
 
 
 @dataclass
+class AgentConfig:
+    """
+    Configuration definitions for the agent
+
+    Attributes
+    ----------
+    ppo : PPOConfig
+        Configuration for the PPO learning algorithm
+    max_buffer_size : int, optional
+        Trajectory buffer capacity prior to model updates
+    roi_shape : tuple[int, int], optional
+        Height and width of region of interest for visual perception
+    discount_factor : float, optional
+        Discount factor for calculating rewards
+    gae_discount_factor : float, optional
+        Discount factor for Generalized Advantage Estimation
+    """
+
+    ppo_config: PPOConfig
+    max_buffer_size: int = 50
+    roi_shape: tuple[int, int] = (32, 32)
+    discount_factor: float = 0.99
+    gae_discount_factor: float = 0.97
+
+
+@dataclass
 class Config:
     """
     Configuration definitions for the full program
@@ -79,7 +93,7 @@ class Config:
     """
 
     engine: EngineConfig
-    ppo: PPOConfig
+    agent: AgentConfig
 
 
 def get_config() -> Config:

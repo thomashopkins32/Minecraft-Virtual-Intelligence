@@ -2,6 +2,7 @@ from typing import Dict, Any, Tuple
 from itertools import chain
 
 import torch
+import torch.nn as nn
 import torch.optim as optim
 
 from mvi.agent.agent import AgentV1
@@ -13,17 +14,20 @@ from mvi.memory.trajectory import PPOTrajectory, PPOSample
 class PPO:
     """Inspired by https://github.com/openai/spinningup/blob/master/spinup/algos/pytorch/ppo/ppo.py"""
 
-    def __init__(self, agent: AgentV1, config: PPOConfig):
+    def __init__(self, actor: nn.Module, critic: nn.Module, config: PPOConfig):
         """
         Parameters
         ----------
-        agent : AgentV1
-            Minecraft agent model used as the actor and critic
+        actor : nn.Module
+            Neural network for the actor
+        critic : nn.Module
+            Neural network for the critic
         config : PPOConfig
             Configuration for the PPO algorithm
         """
-        # Environment & Agent
-        self.agent = agent
+        # Actor & critic
+        self.actor = actor
+        self.critic = critic
 
         # Training duration
         self.train_actor_iters = config.train_actor_iters
