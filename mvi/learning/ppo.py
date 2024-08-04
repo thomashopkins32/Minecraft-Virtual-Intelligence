@@ -1,14 +1,81 @@
-from typing import Dict, Any, Tuple
-from itertools import chain
+from typing import Union, Generator, Self
+import logging
+from dataclasses import dataclass
 
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
 
-from mvi.agent.agent import AgentV1
 from mvi.utils import joint_logp_action
 from mvi.config import PPOConfig
-from mvi.memory.trajectory import PPOTrajectory, PPOSample
+from mvi.memory.trajectory import TrajectoryBuffer
+
+
+@dataclass
+class PPOSample:
+    """
+    A sample of items from a trajectory.
+
+    Attributes
+    ----------
+    features : torch.Tensor
+        Visual features computed from raw observations
+    actions : torch.Tensor
+        Actions taken using features
+    returns : torch.Tensor
+        The return from the full trajectory computed so far
+    advantages : torch.Tensor
+        Advantages of taking each action over the alternative, e.g. `Q(s, a) - V(s)`
+    log_probabilities: torch.Tensor
+        Log of the probability of selecting the action taken
+    """
+    features: torch.Tensor
+    actions: torch.Tensor
+    returns: torch.Tensor
+    advantages: torch.Tensor
+    log_probabilities: torch.Tensor
+
+    def _get_sample(self, indices: np.array) -> Self:
+        return PPOSample(
+            features=self.features[indices],
+            actions=self.actions[indices],
+            returns=self.returns[indices],
+            advantages=self.advantages[indices],
+            log_probabilities=self.log_probabilities[indices],
+        )
+
+    def get(
+        self, shuffle: bool = False, batch_size: Union[int, None] = None
+    ) -> Generator[Self, None, None]:
+        """
+
+
+        Parameters
+        ----------
+        shuffle : bool, optional
+            Randomize the order of the trajectory buffer
+        batch_size : int, optional
+            Yield the data in batches instead of all at once
+
+        Yields
+        ------
+        PPOSample
+            Subset of information about the trajectory, possibly shuffled
+        """
+        size = len(self.features)
+        if shuffle:
+            indices = np.random.permutation(size)
+        else:
+            indices = np.arange(size)
+
+        if batch_size is None:
+            batch_size = size
+
+        start_idx = 0
+        while start_idx < size:
+            yield self._get_sample(indices[start_idx : start_idx + batch_size])
+            start_idx += batch_size
 
 
 class PPO:
@@ -37,15 +104,15 @@ class PPO:
         self.clip_ratio = config.clip_ratio
         self.target_kl = config.target_kl
         self.actor_optim = optim.Adam(
-            chain(self.agent.vision.parameters(), self.agent.affector.parameters()),
+            self.actor.parameters(),
             lr=config.actor_lr,
         )
         self.critic_optim = optim.Adam(
-            chain(self.agent.vision.parameters(), self.agent.reasoner.parameters()),
+            self.critic.parameters(),
             lr=config.critic_lr,
         )
 
-    def _compute_actor_loss(self, data: PPOSample) -> Tuple[torch.Tensor, torch.Tensor]:
+    def _compute_actor_loss(self, data: PPOSample) -> tuple[torch.Tensor, torch.Tensor]:
         env_obs, roi_obs, act, adv, logp_old = (
             data.env_observations,
             data.roi_observations,
@@ -54,7 +121,7 @@ class PPO:
             data.log_probabilities,
         )
 
-        action_dist, _ = self.agent(env_obs, roi_obs)
+        action_dist, _ = self.actor(env_obs, roi_obs)
         logp = joint_logp_action(action_dist, act)
         ratio = torch.exp(logp - logp_old)
         clip_adv = torch.clamp(ratio, 1 - self.clip_ratio, 1 + self.clip_ratio) * adv
@@ -64,8 +131,8 @@ class PPO:
 
         return loss, kl
 
-    def _update_actor(self, data: PPOTrajectory) -> None:
-        self.agent.train()
+    def _update_actor(self, data: PPOSample) -> None:
+        self.actor.train()
         buffer_size = len(data)
         for sample in data.get(
             shuffle=True, batch_size=buffer_size // self.train_actor_iters
@@ -77,19 +144,18 @@ class PPO:
                 break
             loss.backward()
             self.actor_optim.step()
-        self.agent.eval()
+        self.actor.eval()
 
     def _compute_critic_loss(self, data: PPOSample) -> torch.Tensor:
-        env_obs, roi_obs, ret = (
-            data.env_observations,
-            data.roi_observations,
+        feat, ret = (
+            data.features,
             data.returns,
         )
-        _, v = self.agent(env_obs, roi_obs)
+        v = self.critic(feat)
         return ((v - ret) ** 2).mean()
 
-    def _update_critic(self, data: PPOTrajectory) -> None:
-        self.agent.train()
+    def _update_critic(self, data: PPOSample) -> None:
+        self.critic.train()
         buffer_size = len(data)
         for sample in data.get(
             shuffle=True, batch_size=buffer_size // self.train_critic_iters
@@ -98,9 +164,43 @@ class PPO:
             loss = self._compute_critic_loss(sample)
             loss.backward()
             self.critic_optim.step()
-        self.agent.eval()
+        self.critic.eval()
 
-    def update(self, data: PPOTrajectory) -> None:
-        """Updates the actor and critic models given the a dataset of trajectories"""
+    def _finalize_trajectory(self, data: TrajectoryBuffer) -> PPOSample:
+        # TODO: The critic must re-evaluate all of the states in order to get the most accurate estimates of the return
+        size = len(self)
+        if size < self.max_buffer_size:
+            logging.warn(
+                f"Computing information on a potentially unfinished trajectory. Current size: {size}. Max size: {self.max_buffer_size}"
+            )
+
+        self.features = torch.stack(list(self.features_buffer))
+        # Append the last value to these buffers as an estimate of the future return
+        self.rewards = torch.tensor(list(self.rewards_buffer) + [last_value])
+        # TODO: Should we not be re-evaluating all of these?
+        # It makes sense to me that we should be using the most up-to-date critic
+        # to assign values to states
+        self.values = torch.tensor(list(self.values_buffer) + [last_value])
+
+        deltas = (
+            self.rewards[1:] # The reward for a_t is at r_{t+1}
+            + self.discount_factor * self.values[1:]
+            - self.values[:-1]
+        )
+        self.advantages = torch.tensor(
+            discount_cumsum(
+                deltas.numpy(), self.discount_factor * self.gae_discount_factor
+            ).copy()
+        )
+        self.returns = torch.tensor(
+            discount_cumsum(self.rewards[1:].numpy(), self.discount_factor).copy()
+        ).squeeze()
+
+        self.actions = torch.stack(self.actions_buffer)
+        self.log_probabilities = torch.stack(self.log_probs_buffer)
+
+    def update(self, trajectory: TrajectoryBuffer) -> None:
+        """Updates the actor and critic models given the a trajectory"""
+        data = self._finalize_trajectory(trajectory)
         self._update_actor(data)
         self._update_critic(data)

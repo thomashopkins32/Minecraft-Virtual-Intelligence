@@ -15,7 +15,21 @@ def run() -> None:
 
     Runs the Minecraft simulation with the virtual intelligence in it.
     """
+    # Setup
+    config = get_config()
+    engine_config = config.engine
+    env = minedojo.make(task_id="open-ended", image_size=engine_config.image_size)
+    agent = AgentV1(config.agent, env.action_space)
 
+    obs = torch.tensor(env.reset()["rgb"].copy(), dtype=torch.float).unsqueeze(0)
+    total_return = 0.0
+    for s in range(engine_config.max_steps):
+        action = agent.act(obs)
+        next_obs, reward, _, _ = env.step(action)
+        total_return += reward
+        obs = torch.tensor(next_obs["rgb"].copy(), dtype=torch.float).unsqueeze(0)
+
+    """
     # Setup
     config = get_config()
     engine_config = config.engine
@@ -63,6 +77,7 @@ def run() -> None:
 
         # Update models
         ppo.update(trajectory_buffer)
+        """
 
 
 if __name__ == "__main__":
