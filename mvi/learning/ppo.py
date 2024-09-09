@@ -30,24 +30,19 @@ class PPOSample:
     log_probabilities: torch.Tensor
         Log of the probability of selecting the action taken
     """
+
     features: torch.Tensor
     actions: torch.Tensor
     returns: torch.Tensor
     advantages: torch.Tensor
     log_probabilities: torch.Tensor
 
-    def _get_sample(self, indices: np.array) -> Self:
-        return PPOSample(
-            features=self.features[indices],
-            actions=self.actions[indices],
-            returns=self.returns[indices],
-            advantages=self.advantages[indices],
-            log_probabilities=self.log_probabilities[indices],
-        )
+    def __len__(self):
+        return self.features.shape[0]
 
-    def get(
+    def __iter__(
         self, shuffle: bool = False, batch_size: Union[int, None] = None
-    ) -> Generator[Self, None, None]:
+    ) -> Generator["PPOSample", None, None]:
         """
 
 
@@ -74,7 +69,15 @@ class PPOSample:
 
         start_idx = 0
         while start_idx < size:
-            yield self._get_sample(indices[start_idx : start_idx + batch_size])
+            batch_ind = indices[start_idx : start_idx + batch_size]
+            yield PPOSample(
+                features=self.features[batch_ind],
+                actions=self.actions[batch_ind],
+                returns=self.returns[batch_ind],
+                advantages=self.advantages[batch_ind],
+                log_probabilities=self.log_probabilities[batch_ind],
+            )
+
             start_idx += batch_size
 
 
@@ -113,15 +116,14 @@ class PPO:
         )
 
     def _compute_actor_loss(self, data: PPOSample) -> tuple[torch.Tensor, torch.Tensor]:
-        env_obs, roi_obs, act, adv, logp_old = (
-            data.env_observations,
-            data.roi_observations,
+        feat, act, adv, logp_old = (
+            data.features,
             data.actions,
             data.advantages,
             data.log_probabilities,
         )
 
-        action_dist, _ = self.actor(env_obs, roi_obs)
+        action_dist, _ = self.actor(feat)
         logp = joint_logp_action(action_dist, act)
         ratio = torch.exp(logp - logp_old)
         clip_adv = torch.clamp(ratio, 1 - self.clip_ratio, 1 + self.clip_ratio) * adv
@@ -157,9 +159,7 @@ class PPO:
     def _update_critic(self, data: PPOSample) -> None:
         self.critic.train()
         buffer_size = len(data)
-        for sample in data.get(
-            shuffle=True, batch_size=buffer_size // self.train_critic_iters
-        ):
+        for sample in iter(data, shuffle=True, batch_size=buffer_size // self.train_critic_iters):
             self.critic_optim.zero_grad()
             loss = self._compute_critic_loss(sample)
             loss.backward()
@@ -178,12 +178,11 @@ class PPO:
         # Append the last value to these buffers as an estimate of the future return
         self.rewards = torch.tensor(list(self.rewards_buffer) + [last_value])
         # TODO: Should we not be re-evaluating all of these?
-        # It makes sense to me that we should be using the most up-to-date critic
-        # to assign values to states
+        # NO, if we always finalize the current memory prior to learning, the critic will always be the most up-to-date
         self.values = torch.tensor(list(self.values_buffer) + [last_value])
 
         deltas = (
-            self.rewards[1:] # The reward for a_t is at r_{t+1}
+            self.rewards[1:]  # The reward for a_t is at r_{t+1}
             + self.discount_factor * self.values[1:]
             - self.values[:-1]
         )
