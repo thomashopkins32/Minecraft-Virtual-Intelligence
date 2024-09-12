@@ -7,7 +7,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
-from mvi.utils import joint_logp_action
+from mvi.utils import joint_logp_action, discount_cumsum
 from mvi.config import PPOConfig
 from mvi.memory.trajectory import TrajectoryBuffer
 
@@ -40,7 +40,7 @@ class PPOSample:
     def __len__(self):
         return self.features.shape[0]
 
-    def __iter__(
+    def get(
         self, shuffle: bool = False, batch_size: Union[int, None] = None
     ) -> Generator["PPOSample", None, None]:
         """
@@ -104,6 +104,8 @@ class PPO:
         self.train_critic_iters = config.train_critic_iters
 
         # Learning hyperparameters
+        self.discount_factor = config.discount_factor
+        self.gae_discount_factor = config.gae_discount_factor
         self.clip_ratio = config.clip_ratio
         self.target_kl = config.target_kl
         self.actor_optim = optim.Adam(
@@ -159,7 +161,9 @@ class PPO:
     def _update_critic(self, data: PPOSample) -> None:
         self.critic.train()
         buffer_size = len(data)
-        for sample in iter(data, shuffle=True, batch_size=buffer_size // self.train_critic_iters):
+        for sample in data.get(
+            shuffle=True, batch_size=buffer_size // self.train_critic_iters
+        ):
             self.critic_optim.zero_grad()
             loss = self._compute_critic_loss(sample)
             loss.backward()
@@ -167,36 +171,45 @@ class PPO:
         self.critic.eval()
 
     def _finalize_trajectory(self, data: TrajectoryBuffer) -> PPOSample:
-        # TODO: The critic must re-evaluate all of the states in order to get the most accurate estimates of the return
-        size = len(self)
-        if size < self.max_buffer_size:
-            logging.warn(
-                f"Computing information on a potentially unfinished trajectory. Current size: {size}. Max size: {self.max_buffer_size}"
-            )
+        """
+        This aggregates the features, actions, log probabilities, returns, and advantages
+        from a fixed trajectory.
 
-        self.features = torch.stack(list(self.features_buffer))
-        # Append the last value to these buffers as an estimate of the future return
-        self.rewards = torch.tensor(list(self.rewards_buffer) + [last_value])
-        # TODO: Should we not be re-evaluating all of these?
-        # NO, if we always finalize the current memory prior to learning, the critic will always be the most up-to-date
-        self.values = torch.tensor(list(self.values_buffer) + [last_value])
+        This method expects the following at time `t`:
+        - data.features[t]: visual features of the environment computed at time `t`
+        - data.actions[t]: the action taken in the environment at time `t`
+        - data.log_probabilities[t]: the log probability of selecting `data.actions[t]`
+        - data.values[t]: the value assigned to `data.features[t]`
+        - data.rewards[t]: the reward given by the environment about the action take at time `t - 1`
+        """
 
-        deltas = (
-            self.rewards[1:]  # The reward for a_t is at r_{t+1}
-            + self.discount_factor * self.values[1:]
-            - self.values[:-1]
-        )
-        self.advantages = torch.tensor(
+        # Cannot use the last values here since we don't have the associated reward yet
+        features = torch.stack(list(data.features_buffer)[:-1])
+        actions = torch.stack(list(data.actions_buffer)[:-1])
+        log_probabilities = torch.stack(list(data.log_probs_buffer)[:-1])
+        # Cannot use the first reward value since we no longer have the associated feature
+        # The reward for a_t is at r_{t+1}
+        rewards = torch.tensor(list(data.rewards_buffer)[1:])
+        # Need all values since the final one is used to estimate future reward
+        values = torch.tensor(list(data.values_buffer))
+
+        deltas = rewards + (self.discount_factor * values[1:]) - values[:-1]
+        advantages = torch.tensor(
             discount_cumsum(
                 deltas.numpy(), self.discount_factor * self.gae_discount_factor
             ).copy()
         )
-        self.returns = torch.tensor(
-            discount_cumsum(self.rewards[1:].numpy(), self.discount_factor).copy()
+        returns = torch.tensor(
+            discount_cumsum(rewards.numpy(), self.discount_factor).copy()
         ).squeeze()
 
-        self.actions = torch.stack(self.actions_buffer)
-        self.log_probabilities = torch.stack(self.log_probs_buffer)
+        return PPOSample(
+            features=features,
+            actions=actions,
+            returns=returns,
+            advantages=advantages,
+            log_probabilities=log_probabilities,
+        )
 
     def update(self, trajectory: TrajectoryBuffer) -> None:
         """Updates the actor and critic models given the a trajectory"""

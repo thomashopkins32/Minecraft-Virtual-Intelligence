@@ -43,6 +43,10 @@ class PPOConfig:
         Number of iterations to train the actor per epoch
     train_critic_iters : int, optional
         Number of iterations to train the critic per epoch
+    discount_factor : float, optional
+        Discount factor for calculating rewards
+    gae_discount_factor : float, optional
+        Discount factor for Generalized Advantage Estimation
     """
 
     clip_ratio: float = 0.2
@@ -51,6 +55,8 @@ class PPOConfig:
     critic_lr: float = 1.0e-3
     train_actor_iters: int = 80
     train_critic_iters: int = 80
+    discount_factor: float = 0.99
+    gae_discount_factor: float = 0.97
 
 
 @dataclass
@@ -66,17 +72,11 @@ class AgentConfig:
         Trajectory buffer capacity prior to model updates
     roi_shape : tuple[int, int], optional
         Height and width of region of interest for visual perception
-    discount_factor : float, optional
-        Discount factor for calculating rewards
-    gae_discount_factor : float, optional
-        Discount factor for Generalized Advantage Estimation
     """
 
     ppo_config: PPOConfig
     max_buffer_size: int = 50
     roi_shape: tuple[int, int] = (32, 32)
-    discount_factor: float = 0.99
-    gae_discount_factor: float = 0.97
 
 
 @dataclass
