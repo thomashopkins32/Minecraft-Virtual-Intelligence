@@ -6,8 +6,10 @@ from gymnasium.spaces import MultiDiscrete
 
 from mvi.perception.visual import VisualPerception
 from mvi.affector.affector import LinearAffector
-from mvi.reasoning.critic import LinearReasoner
+from mvi.reasoning.critic import LinearCritic
+from mvi.reasoning.dynamics import InverseDynamics, ForwardDynamics
 from mvi.memory.trajectory import TrajectoryBuffer
+from mvi.learning.icm import ICM
 from mvi.learning.ppo import PPO
 from mvi.config import AgentConfig
 from mvi.utils import sample_action
@@ -25,11 +27,12 @@ class AgentV1:
     def __init__(self, config: AgentConfig, action_space: MultiDiscrete):
         self.vision = VisualPerception(out_channels=32)
         self.affector = LinearAffector(32 + 32, action_space)
-        self.reasoner = LinearReasoner(32 + 32)
+        self.reasoner = LinearCritic(32 + 32)
         self.memory = TrajectoryBuffer(config.max_buffer_size)
         self.inverse_dynamics = InverseDynamics(32 + 32, action_space)
-        self.forward_dynamics = ForwardDynamics(32 + 32, action_space)
+        self.forward_dynamics = ForwardDynamics(32 + 32, action_space.shape[0])
         self.ppo = PPO(self.affector, self.reasoner, config.ppo)
+        self.icm = ICM()
         self.config = config
 
         # region of interest initialization
@@ -63,5 +66,6 @@ class AgentV1:
         # Once the trajectory buffer is full, we can start learning
         if len(self.memory) == self.config.max_buffer_size:
             self.ppo.update(self.memory)
+            self.icm.update(self.memory)
 
         return action[:-2]

@@ -31,13 +31,6 @@ class TrajectoryBuffer:
     def __len__(self):
         return len(self.features_buffer)
 
-    def reset(self) -> None:
-        self.observations_buffer = []
-        self.actions_buffer = []
-        self.rewards_buffer = []
-        self.values_buffer = []
-        self.log_probs_buffer = []
-
     def store(
         self,
         visual_features: torch.Tensor,

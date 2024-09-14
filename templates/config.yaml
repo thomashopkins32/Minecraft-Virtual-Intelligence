@@ -17,5 +17,8 @@ agent:
     train_critic_iters: 80 # Number of iterations to train critic
     discount_factor: 0.99
     gae_discount_factor: 0.97
+  icm:
+    inverse_dynamics_lr: 1.0e-3
+    forward_dynamics_lr: 1.0e-3
   max_buffer_size: 50
   roi_shape: !!python/tuple [32, 32]
