@@ -102,7 +102,8 @@ def get_config() -> Config:
         config = parse_config(arguments.file)
     else:
         config = Config(engine=EngineConfig(), agent=AgentConfig(ppo=PPOConfig()))
-    update_config(config, arguments.key_value_pairs)
+    if arguments.key_value_pairs is not None:
+        update_config(config, arguments.key_value_pairs)
     return config
 
 
@@ -119,9 +120,12 @@ def parse_arguments() -> argparse.Namespace:
         default=None,
     )
     parser.add_argument(
-        "key_value_pairs",
-        nargs="+",
+        "-kvp",
+        "--key_value_pairs",
+        nargs="*",
         help="Key-value pairs to override in the configuration (nested configs can be accessed via '.')",
+        required=False,
+        default=None
     )
     return parser.parse_args()
 
