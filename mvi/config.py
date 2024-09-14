@@ -18,22 +18,10 @@ class EngineConfig:
         Height and width for Minecraft rendered images
     max_steps : int, optional
         Total number of environment steps before program termination
-    max_buffer_size : int, optional
-        Trajectory buffer capacity prior to model updates
-    roi_shape : tuple[int, int], optional
-        Height and width of region of interest for visual perception
-    discount_factor : float, optional
-        Discount factor for calculating rewards
-    gae_discount_factor : float, optional
-        Discount factor for Generalized Advantage Estimation
     """
 
     image_size: tuple[int, int] = (160, 256)
     max_steps: int = 10_000
-    max_buffer_size: int = 50
-    roi_shape: tuple[int, int] = (32, 32)
-    discount_factor: float = 0.99
-    gae_discount_factor: float = 0.97
 
 
 @dataclass
@@ -55,6 +43,10 @@ class PPOConfig:
         Number of iterations to train the actor per epoch
     train_critic_iters : int, optional
         Number of iterations to train the critic per epoch
+    discount_factor : float, optional
+        Discount factor for calculating rewards
+    gae_discount_factor : float, optional
+        Discount factor for Generalized Advantage Estimation
     """
 
     clip_ratio: float = 0.2
@@ -63,6 +55,28 @@ class PPOConfig:
     critic_lr: float = 1.0e-3
     train_actor_iters: int = 80
     train_critic_iters: int = 80
+    discount_factor: float = 0.99
+    gae_discount_factor: float = 0.97
+
+
+@dataclass
+class AgentConfig:
+    """
+    Configuration definitions for the agent
+
+    Attributes
+    ----------
+    ppo : PPOConfig
+        Configuration for the PPO learning algorithm
+    max_buffer_size : int, optional
+        Trajectory buffer capacity prior to model updates
+    roi_shape : tuple[int, int], optional
+        Height and width of region of interest for visual perception
+    """
+
+    ppo: PPOConfig
+    max_buffer_size: int = 50
+    roi_shape: tuple[int, int] = (32, 32)
 
 
 @dataclass
@@ -79,7 +93,7 @@ class Config:
     """
 
     engine: EngineConfig
-    ppo: PPOConfig
+    agent: AgentConfig
 
 
 def get_config() -> Config:
@@ -87,8 +101,9 @@ def get_config() -> Config:
     if arguments.file is not None:
         config = parse_config(arguments.file)
     else:
-        config = Config(engine=EngineConfig(), ppo=PPOConfig())
-    update_config(config, arguments.key_value_pairs)
+        config = Config(engine=EngineConfig(), agent=AgentConfig(ppo=PPOConfig()))
+    if arguments.key_value_pairs is not None:
+        update_config(config, arguments.key_value_pairs)
     return config
 
 
@@ -105,9 +120,12 @@ def parse_arguments() -> argparse.Namespace:
         default=None,
     )
     parser.add_argument(
-        "key_value_pairs",
-        nargs="+",
+        "-kvp",
+        "--key_value_pairs",
+        nargs="*",
         help="Key-value pairs to override in the configuration (nested configs can be accessed via '.')",
+        required=False,
+        default=None,
     )
     return parser.parse_args()
 
