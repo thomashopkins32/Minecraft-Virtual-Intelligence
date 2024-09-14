@@ -34,7 +34,7 @@ def test_agent_v1_params(agent_v1_module: AgentV1):
     modules = [
         agent_v1_module.vision,
         agent_v1_module.affector,
-        agent_v1_module.reasoner
+        agent_v1_module.reasoner,
     ]
     num_params = sum(sum(p.numel() for p in m.parameters()) for m in modules)
     assert num_params == AGENT_V1_EXPECTED_PARAMS

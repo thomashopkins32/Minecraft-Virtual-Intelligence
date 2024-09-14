@@ -11,7 +11,10 @@ from tests.helper import MockEnv
 @pytest.fixture
 def ppo_module():
     env = MockEnv()
-    agent = AgentV1(AgentConfig(ppo=PPOConfig(train_actor_iters=2, train_critic_iters=2)), env.action_space)
+    agent = AgentV1(
+        AgentConfig(ppo=PPOConfig(train_actor_iters=2, train_critic_iters=2)),
+        env.action_space,
+    )
     return agent.ppo
 
 

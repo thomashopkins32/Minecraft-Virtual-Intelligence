@@ -1,7 +1,7 @@
 from typing import Union
 
 import torch
-from torchvision.transforms.functional import center_crop, crop
+from torchvision.transforms.functional import center_crop, crop  # type: ignore
 from gymnasium.spaces import MultiDiscrete
 
 from mvi.perception.visual import VisualPerception

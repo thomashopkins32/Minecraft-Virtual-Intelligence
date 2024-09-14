@@ -29,7 +29,7 @@ class TrajectoryBuffer:
         self.log_probs_buffer: deque[torch.Tensor] = deque([], maxlen=max_buffer_size)
 
     def __len__(self):
-        return len(self.features_buffer) 
+        return len(self.features_buffer)
 
     def store(
         self,
