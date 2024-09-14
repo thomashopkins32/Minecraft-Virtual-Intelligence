@@ -125,7 +125,7 @@ def parse_arguments() -> argparse.Namespace:
         nargs="*",
         help="Key-value pairs to override in the configuration (nested configs can be accessed via '.')",
         required=False,
-        default=None
+        default=None,
     )
     return parser.parse_args()
 
