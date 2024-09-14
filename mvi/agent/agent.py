@@ -7,7 +7,7 @@ from gymnasium.spaces import MultiDiscrete
 from mvi.perception.visual import VisualPerception
 from mvi.affector.affector import LinearAffector
 from mvi.reasoning.critic import LinearReasoner
-from mvi.memory.trajectory import PPOTrajectory
+from mvi.memory.trajectory import TrajectoryBuffer
 from mvi.learning.ppo import PPO
 from mvi.config import AgentConfig
 from mvi.utils import sample_action
@@ -26,8 +26,8 @@ class AgentV1:
         self.vision = VisualPerception(out_channels=32)
         self.affector = LinearAffector(32 + 32, action_space)
         self.reasoner = LinearReasoner(32 + 32)
-        self.memory = PPOTrajectory(config.max_buffer_size, config.discount_factor, config.gae_discount_factor)
-        self.ppo = PPO(self.affector, self.reasoner, config.ppo_config)
+        self.memory = TrajectoryBuffer(config.max_buffer_size)
+        self.ppo = PPO(self.affector, self.reasoner, config.ppo)
         self.config = config
 
         # region of interest initialization
@@ -46,7 +46,7 @@ class AgentV1:
             )
         return roi_obs
 
-    def act(self, obs: torch.Tensor, previous_reward: float = 0.0) -> torch.Tensor:
+    def act(self, obs: torch.Tensor, reward: float = 0.0) -> torch.Tensor:
 
         roi_obs = self._transform_observation(obs)
         with torch.no_grad():
@@ -56,7 +56,7 @@ class AgentV1:
         action, logp_action = sample_action(actions)
         self.roi_action = action[-2:]
 
-        self.memory.store(visual_features, action, previous_reward, value, logp_action)
+        self.memory.store(visual_features, action, reward, value, logp_action)
 
         # Once the trajectory buffer is full, we can start learning
         if len(self.memory) == self.config.max_buffer_size:

@@ -1,5 +1,4 @@
-from typing import Union, Generator, Self
-import logging
+from typing import Union, Generator
 from dataclasses import dataclass
 
 import numpy as np
@@ -125,7 +124,7 @@ class PPO:
             data.log_probabilities,
         )
 
-        action_dist, _ = self.actor(feat)
+        action_dist = self.actor(feat)
         logp = joint_logp_action(action_dist, act)
         ratio = torch.exp(logp - logp_old)
         clip_adv = torch.clamp(ratio, 1 - self.clip_ratio, 1 + self.clip_ratio) * adv

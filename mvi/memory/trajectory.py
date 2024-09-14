@@ -1,10 +1,8 @@
 from collections import deque
 
-import numpy as np
 import torch
 
 
-# TODO: convert to dataclass
 class TrajectoryBuffer:
     """
     Used to store a single trajectory.
@@ -21,29 +19,17 @@ class TrajectoryBuffer:
     This is because the next observation and reward are not available until the next step is stored.
     """
 
-    def __init__(
-        self,
-        max_buffer_size: int,
-        discount_factor: float = 0.99,
-        gae_discount_factor: float = 0.95,
-    ):
+    def __init__(self, max_buffer_size: int):
         self.max_buffer_size = max_buffer_size
-        self.discount_factor = discount_factor
-        self.gae_discount_factor = gae_discount_factor
 
-        # Explicitly Stored
         self.features_buffer: deque[torch.Tensor] = deque([], maxlen=max_buffer_size)
         self.actions_buffer: deque[torch.Tensor] = deque([], maxlen=max_buffer_size)
         self.rewards_buffer: deque[float] = deque([], maxlen=max_buffer_size)
         self.values_buffer: deque[float] = deque([], maxlen=max_buffer_size)
         self.log_probs_buffer: deque[torch.Tensor] = deque([], maxlen=max_buffer_size)
 
-        # Computed Values
-        self.advantages_buffer: deque[float] = deque([], maxlen=max_buffer_size)
-        self.returns_buffer: deque[float] = deque([], maxlen=max_buffer_size)
-
     def __len__(self):
-        return self.max_buffer_size
+        return len(self.features_buffer) 
 
     def store(
         self,

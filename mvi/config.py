@@ -74,7 +74,7 @@ class AgentConfig:
         Height and width of region of interest for visual perception
     """
 
-    ppo_config: PPOConfig
+    ppo: PPOConfig
     max_buffer_size: int = 50
     roi_shape: tuple[int, int] = (32, 32)
 
@@ -101,7 +101,7 @@ def get_config() -> Config:
     if arguments.file is not None:
         config = parse_config(arguments.file)
     else:
-        config = Config(engine=EngineConfig(), ppo=PPOConfig())
+        config = Config(engine=EngineConfig(), agent=AgentConfig(ppo=PPOConfig()))
     update_config(config, arguments.key_value_pairs)
     return config
 

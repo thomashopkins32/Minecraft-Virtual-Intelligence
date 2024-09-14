@@ -6,8 +6,14 @@ import pytest
 import yaml
 
 from mvi.agent.agent import AgentV1
-from mvi.learning.ppo import PPO
-from mvi.config import parse_config, update_config, PPOConfig, EngineConfig, Config
+from mvi.config import (
+    parse_config,
+    update_config,
+    PPOConfig,
+    EngineConfig,
+    AgentConfig,
+    Config,
+)
 from tests.helper import ACTION_SPACE
 
 
@@ -22,18 +28,26 @@ def test_ppo_config():
 
     # Parsing
     config = parse_config(template_path)
-    agent = AgentV1(ACTION_SPACE)
-    ppo = PPO(agent, config.ppo)
-
-    print(config_dict)
+    agent = AgentV1(config.agent, ACTION_SPACE)
 
     # Comparison
-    assert ppo.clip_ratio == config_dict["ppo"]["clip_ratio"]
-    assert ppo.target_kl == config_dict["ppo"]["target_kl"]
-    assert ppo.actor_optim.param_groups[-1]["lr"] == config_dict["ppo"]["actor_lr"]
-    assert ppo.critic_optim.param_groups[-1]["lr"] == config_dict["ppo"]["critic_lr"]
-    assert ppo.train_actor_iters == config_dict["ppo"]["train_actor_iters"]
-    assert ppo.train_critic_iters == config_dict["ppo"]["train_critic_iters"]
+    assert agent.ppo.clip_ratio == config_dict["agent"]["ppo"]["clip_ratio"]
+    assert agent.ppo.target_kl == config_dict["agent"]["ppo"]["target_kl"]
+    assert (
+        agent.ppo.actor_optim.param_groups[-1]["lr"]
+        == config_dict["agent"]["ppo"]["actor_lr"]
+    )
+    assert (
+        agent.ppo.critic_optim.param_groups[-1]["lr"]
+        == config_dict["agent"]["ppo"]["critic_lr"]
+    )
+    assert (
+        agent.ppo.train_actor_iters == config_dict["agent"]["ppo"]["train_actor_iters"]
+    )
+    assert (
+        agent.ppo.train_critic_iters
+        == config_dict["agent"]["ppo"]["train_critic_iters"]
+    )
 
 
 def test_parse_config():
@@ -48,26 +62,35 @@ def test_parse_config():
     config = parse_config(template_path)
 
     # Comparison
-    assert config.engine.discount_factor == config_dict["engine"]["discount_factor"]
     assert (
-        config.engine.gae_discount_factor
-        == config_dict["engine"]["gae_discount_factor"]
+        config.agent.ppo.discount_factor
+        == config_dict["agent"]["ppo"]["discount_factor"]
+    )
+    assert (
+        config.agent.ppo.gae_discount_factor
+        == config_dict["agent"]["ppo"]["gae_discount_factor"]
     )
     assert config.engine.image_size == config_dict["engine"]["image_size"]
-    assert config.engine.max_buffer_size == config_dict["engine"]["max_buffer_size"]
     assert config.engine.max_steps == config_dict["engine"]["max_steps"]
-    assert config.engine.roi_shape == config_dict["engine"]["roi_shape"]
-    assert config.ppo.actor_lr == config_dict["ppo"]["actor_lr"]
-    assert config.ppo.critic_lr == config_dict["ppo"]["critic_lr"]
-    assert config.ppo.critic_lr == config_dict["ppo"]["critic_lr"]
-    assert config.ppo.clip_ratio == config_dict["ppo"]["clip_ratio"]
-    assert config.ppo.target_kl == config_dict["ppo"]["target_kl"]
-    assert config.ppo.train_actor_iters == config_dict["ppo"]["train_actor_iters"]
-    assert config.ppo.train_critic_iters == config_dict["ppo"]["train_critic_iters"]
+    assert config.agent.roi_shape == config_dict["agent"]["roi_shape"]
+    assert config.agent.max_buffer_size == config_dict["agent"]["max_buffer_size"]
+    assert config.agent.ppo.actor_lr == config_dict["agent"]["ppo"]["actor_lr"]
+    assert config.agent.ppo.critic_lr == config_dict["agent"]["ppo"]["critic_lr"]
+    assert config.agent.ppo.critic_lr == config_dict["agent"]["ppo"]["critic_lr"]
+    assert config.agent.ppo.clip_ratio == config_dict["agent"]["ppo"]["clip_ratio"]
+    assert config.agent.ppo.target_kl == config_dict["agent"]["ppo"]["target_kl"]
+    assert (
+        config.agent.ppo.train_actor_iters
+        == config_dict["agent"]["ppo"]["train_actor_iters"]
+    )
+    assert (
+        config.agent.ppo.train_critic_iters
+        == config_dict["agent"]["ppo"]["train_critic_iters"]
+    )
 
 
 def test_update_config():
-    config = Config(engine=EngineConfig(), ppo=PPOConfig())
+    config = Config(engine=EngineConfig(), agent=AgentConfig(ppo=PPOConfig()))
 
     # Other - empty list
     before_change = deepcopy(config)
@@ -76,10 +99,10 @@ def test_update_config():
     assert asdict(before_change) == asdict(config)
 
     # Valid update - replace values
-    to_update = ["engine.image_size=[200,200]", "ppo.clip_ratio=3.0"]
+    to_update = ["engine.image_size=[200,200]", "agent.ppo.clip_ratio=3.0"]
     update_config(config, to_update)
     assert config.engine.image_size == (200, 200)
-    assert config.ppo.clip_ratio == 3.0
+    assert config.agent.ppo.clip_ratio == 3.0
     assert asdict(before_change) != asdict(config)
 
     # Invalid update - type mismatch
