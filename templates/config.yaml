@@ -18,6 +18,7 @@ agent:
     discount_factor: 0.99
     gae_discount_factor: 0.97
   icm:
+    scaling_factor: 1.0
     inverse_dynamics_lr: 1.0e-3
     forward_dynamics_lr: 1.0e-3
   max_buffer_size: 50

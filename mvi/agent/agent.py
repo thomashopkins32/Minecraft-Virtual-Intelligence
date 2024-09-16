@@ -32,11 +32,12 @@ class AgentV1:
         self.inverse_dynamics = InverseDynamics(32 + 32, action_space)
         self.forward_dynamics = ForwardDynamics(32 + 32, action_space.shape[0])
         self.ppo = PPO(self.affector, self.reasoner, config.ppo)
-        self.icm = ICM()
+        self.icm = ICM(self.forward_dynamics, self.inverse_dynamics, config.icm)
         self.config = config
 
         # region of interest initialization
         self.roi_action: Union[torch.Tensor, None] = None
+        self.prev_visual_features: torch.Tensor = torch.zeros((64,), dtype=torch.float)
 
     def _transform_observation(self, obs: torch.Tensor) -> torch.Tensor:
         if self.roi_action is None:
@@ -61,7 +62,15 @@ class AgentV1:
         action, logp_action = sample_action(actions)
         self.roi_action = action[-2:]
 
-        self.memory.store(visual_features, action, reward, value, logp_action)
+        # Get the intrinsic reward associated with the previous observation
+        with torch.no_grad():
+            intrinsic_reward = self.icm.intrinsic_reward(
+                self.prev_visual_features, action, visual_features
+            )
+
+        self.memory.store(
+            visual_features, action, reward, intrinsic_reward, value, logp_action
+        )
 
         # Once the trajectory buffer is full, we can start learning
         if len(self.memory) == self.config.max_buffer_size:

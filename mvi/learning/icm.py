@@ -4,9 +4,10 @@ from dataclasses import dataclass
 import numpy as np
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import torch.optim as optim
 
-from mvi.memory.trajectory import TrajectoryBuffer 
+from mvi.memory.trajectory import TrajectoryBuffer
 from mvi.config import ICMConfig
 
 
@@ -76,16 +77,31 @@ class ICM:
     Intrinsic Curiosity Module (ICM). This enhances the reward from the environment by adding a
     component that favors situations where next-state prediction error is high.
     """
-    def __init__(self, forward_dynamics: nn.Module, inverse_dynamics: nn.Module, config: ICMConfig):
+
+    def __init__(
+        self,
+        forward_dynamics: nn.Module,
+        inverse_dynamics: nn.Module,
+        config: ICMConfig,
+    ):
         self.config = config
 
         self.forward_dynamics = forward_dynamics
         self.inverse_dynamics = inverse_dynamics
 
-        self.forward_dynamics_optimizer = optim.Adam(self.forward_dynamics.parameters(), lr=config.forward_dynamics_lr)
-        self.inverse_dynamics_optimizer = optim.Adam(self.inverse_dynamics.parameters(), lr=config.inverse_dynamics_lr)
+        self.forward_dynamics_optimizer = optim.Adam(
+            self.forward_dynamics.parameters(), lr=config.forward_dynamics_lr
+        )
+        self.inverse_dynamics_optimizer = optim.Adam(
+            self.inverse_dynamics.parameters(), lr=config.inverse_dynamics_lr
+        )
 
-    def intrinsic_reward(self, embedding: torch.Tensor, action: torch.Tensor, next_embedding: torch.Tensor) -> float:
+    def intrinsic_reward(
+        self,
+        embedding: torch.Tensor,
+        action: torch.Tensor,
+        next_embedding: torch.Tensor,
+    ) -> float:
         """
         Computes the intrinsic reward of the agent. This is used as a proxy for curiosity based on how well
         the agent is able to predict the `next_embedding` given the `embedding` and `action` vectors.
@@ -110,7 +126,12 @@ class ICM:
             Weighted mean-squared error between the prediction from the forward dynamics model
             and the `next_embedding`
         """
-        raise NotImplementedError()
+        with torch.no_grad():
+            predicted_next_state = self.forward_dynamics(embedding, action)
+        return (
+            self.config.scaling_factor
+            * F.mse_loss(predicted_next_state, next_embedding).item()
+        )
 
     def _update_inverse_dynamics(self, data: ICMSample) -> None:
         raise NotImplementedError()

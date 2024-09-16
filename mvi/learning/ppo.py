@@ -188,7 +188,9 @@ class PPO:
         log_probabilities = torch.stack(list(data.log_probs_buffer)[:-1])
         # Cannot use the first reward value since we no longer have the associated feature
         # The reward for a_t is at r_{t+1}
-        rewards = torch.tensor(list(data.rewards_buffer)[1:])
+        env_rewards = torch.tensor(list(data.rewards_buffer)[1:])
+        intrinsic_rewards = torch.tensor(list(data.intrinsic_rewards_buffer)[1:])
+        rewards = env_rewards + intrinsic_rewards
         # Need all values since the final one is used to estimate future reward
         values = torch.tensor(list(data.values_buffer))
 
