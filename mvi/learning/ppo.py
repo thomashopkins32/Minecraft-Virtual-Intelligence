@@ -4,6 +4,7 @@ from dataclasses import dataclass
 import numpy as np
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import torch.optim as optim
 
 from mvi.utils import joint_logp_action, discount_cumsum
@@ -155,7 +156,7 @@ class PPO:
             data.returns,
         )
         v = self.critic(feat)
-        return ((v - ret) ** 2).mean()
+        return F.mse_loss(v, ret)
 
     def _update_critic(self, data: PPOSample) -> None:
         self.critic.train()

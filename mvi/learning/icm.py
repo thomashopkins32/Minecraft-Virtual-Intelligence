@@ -133,14 +133,48 @@ class ICM:
             * F.mse_loss(predicted_next_state, next_embedding).item()
         )
 
+    def _compute_inverse_dynamics_loss(self, sample: ICMSample) -> torch.Tensor:
+        feat, next_feat, actions = (
+            sample.features,
+            sample.next_features,
+            sample.actions,
+        )
+        actions_pred = self.inverse_dynamics(feat, next_feat)
+        return F.cross_entropy(actions, actions_pred)
+
     def _update_inverse_dynamics(self, data: ICMSample) -> None:
-        raise NotImplementedError()
+        self.inverse_dynamics.train()
+        for sample in data.get(shuffle=True, batch_size=256):
+            self.inverse_dynamics_optimizer.zero_grad()
+            loss = self._compute_inverse_dynamics_loss(sample)
+            loss.backward()
+            self.inverse_dynamics_optimizer.step()
+        self.inverse_dynamics.eval()
+
+    def _compute_forward_dynamics_loss(self, sample: ICMSample) -> torch.Tensor:
+        feat, next_feat, actions = (
+            sample.features,
+            sample.next_features,
+            sample.actions,
+        )
+        next_feat_pred = self.forward_dynamics(feat, actions)
+        return F.mse_loss(next_feat_pred, next_feat)
 
     def _update_forward_dynamics(self, data: ICMSample) -> None:
-        raise NotImplementedError()
+        self.forward_dynamics.train()
+        for sample in data.get(shuffle=True, batch_size=256):
+            self.forward_dynamics_optimizer.zero_grad()
+            loss = self._compute_forward_dynamics_loss(sample)
+            loss.backward()
+            self.forward_dynamics_optimizer.step()
+        self.forward_dynamics.eval()
 
     def _finalize_trajectory(self, data: TrajectoryBuffer) -> ICMSample:
-        raise NotImplementedError()
+        features_buffer = list(data.features_buffer)
+        features = torch.stack(features_buffer[:-1])
+        next_features = torch.stack(features_buffer[1:])
+        actions = torch.stack(list(data.actions_buffer)[:-1])
+        return ICMSample(features, next_features, actions)
 
     def update(self, data: TrajectoryBuffer) -> None:
         sample = self._finalize_trajectory(data)
