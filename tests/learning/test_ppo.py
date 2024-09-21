@@ -1,8 +1,8 @@
 import pytest
-import torch
 from mvi.agent.agent import AgentV1
+import torch
 from mvi.learning.ppo import PPO
-from mvi.config import AgentConfig, PPOConfig
+from mvi.config import AgentConfig, PPOConfig, ICMConfig
 from mvi.memory.trajectory import TrajectoryBuffer
 
 from tests.helper import MockEnv
@@ -12,7 +12,9 @@ from tests.helper import MockEnv
 def ppo_module():
     env = MockEnv()
     agent = AgentV1(
-        AgentConfig(ppo=PPOConfig(train_actor_iters=2, train_critic_iters=2)),
+        AgentConfig(
+            ppo=PPOConfig(train_actor_iters=2, train_critic_iters=2), icm=ICMConfig()
+        ),
         env.action_space,
     )
     return agent.ppo
@@ -27,6 +29,7 @@ def test_ppo_update(ppo_module: PPO) -> None:
         trajectory.store(
             torch.zeros((64,), dtype=torch.float),
             torch.zeros((10,), dtype=torch.long),
+            0.0,
             0.0,
             0.0,
             torch.ones((1,), dtype=torch.float),

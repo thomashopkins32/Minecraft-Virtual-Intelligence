@@ -199,10 +199,12 @@ class PPO:
         advantages = torch.tensor(
             discount_cumsum(
                 deltas.numpy(), self.discount_factor * self.gae_discount_factor
-            ).copy()
+            ).copy(),
+            dtype=torch.float,
         )
         returns = torch.tensor(
-            discount_cumsum(rewards.numpy(), self.discount_factor).copy()
+            discount_cumsum(rewards.numpy(), self.discount_factor).copy(),
+            dtype=torch.float,
         ).squeeze()
 
         return PPOSample(
