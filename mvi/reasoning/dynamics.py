@@ -76,7 +76,7 @@ class ForwardDynamics(nn.Module):
         torch.Tensor
             Feature representation of the next state of the environment
         """
-        x = torch.cat((x, a), dim=1)
+        x = torch.cat((x, a), dim=-1)
         x = F.relu(self.l1(x))
         x = self.l2(x)
         return x

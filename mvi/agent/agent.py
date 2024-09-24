@@ -27,11 +27,11 @@ class AgentV1:
     def __init__(self, config: AgentConfig, action_space: MultiDiscrete):
         self.vision = VisualPerception(out_channels=32)
         self.affector = LinearAffector(32 + 32, action_space)
-        self.reasoner = LinearCritic(32 + 32)
+        self.critic = LinearCritic(32 + 32)
         self.memory = TrajectoryBuffer(config.max_buffer_size)
         self.inverse_dynamics = InverseDynamics(32 + 32, action_space)
-        self.forward_dynamics = ForwardDynamics(32 + 32, action_space.shape[0])
-        self.ppo = PPO(self.affector, self.reasoner, config.ppo)
+        self.forward_dynamics = ForwardDynamics(32 + 32, action_space.shape[0] + 2)
+        self.ppo = PPO(self.affector, self.critic, config.ppo)
         self.icm = ICM(self.forward_dynamics, self.inverse_dynamics, config.icm)
         self.config = config
 
@@ -58,7 +58,7 @@ class AgentV1:
         with torch.no_grad():
             visual_features = self.vision(obs, roi_obs)
             actions = self.affector(visual_features)
-            value = self.reasoner(visual_features)
+            value = self.critic(visual_features)
         action, logp_action = sample_action(actions)
         self.roi_action = action[-2:]
 

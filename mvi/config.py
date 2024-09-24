@@ -76,6 +76,8 @@ class ICMConfig:
     """
 
     scaling_factor: float = 1.0
+    train_inverse_dynamics_iters: int = 80
+    train_forward_dynamics_iters: int = 80
     inverse_dynamics_lr: float = 1.0e-3
     forward_dynamics_lr: float = 1.0e-3
 

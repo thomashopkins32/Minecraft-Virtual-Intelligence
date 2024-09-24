@@ -19,6 +19,8 @@ agent:
     gae_discount_factor: 0.97
   icm:
     scaling_factor: 1.0
+    train_forward_dynamics_iters: 80
+    train_inverse_dynamics_iters: 80
     inverse_dynamics_lr: 1.0e-3
     forward_dynamics_lr: 1.0e-3
   max_buffer_size: 50

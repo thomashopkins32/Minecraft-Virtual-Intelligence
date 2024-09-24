@@ -140,11 +140,26 @@ class ICM:
             sample.actions,
         )
         actions_pred = self.inverse_dynamics(feat, next_feat)
-        return F.cross_entropy(actions, actions_pred)
+        return (
+            F.nll_loss(torch.log(actions_pred[0]), actions[0])
+            + F.nll_loss(torch.log(actions_pred[1]), actions[1])
+            + F.nll_loss(torch.log(actions_pred[2]), actions[2])
+            + F.nll_loss(torch.log(actions_pred[3]), actions[3])
+            + F.nll_loss(torch.log(actions_pred[4]), actions[4])
+            + F.nll_loss(torch.log(actions_pred[5]), actions[5])
+            + F.nll_loss(torch.log(actions_pred[6]), actions[6])
+            + F.nll_loss(torch.log(actions_pred[7]), actions[7])
+            + F.gaussian_nll_loss(actions_pred[8][:, 0], actions[8], actions_pred[9][:, 0] ** 2)
+            + F.gaussian_nll_loss(actions_pred[8][:, 1], actions[9], actions_pred[9][:, 1] ** 2)
+        )
 
     def _update_inverse_dynamics(self, data: ICMSample) -> None:
         self.inverse_dynamics.train()
-        for sample in data.get(shuffle=True, batch_size=256):
+        buffer_size = len(data)
+        for sample in data.get(
+            shuffle=True,
+            batch_size=buffer_size // self.config.train_inverse_dynamics_iters,
+        ):
             self.inverse_dynamics_optimizer.zero_grad()
             loss = self._compute_inverse_dynamics_loss(sample)
             loss.backward()
@@ -162,7 +177,11 @@ class ICM:
 
     def _update_forward_dynamics(self, data: ICMSample) -> None:
         self.forward_dynamics.train()
-        for sample in data.get(shuffle=True, batch_size=256):
+        buffer_size = len(data)
+        for sample in data.get(
+            shuffle=True,
+            batch_size=buffer_size // self.config.train_forward_dynamics_iters,
+        ):
             self.forward_dynamics_optimizer.zero_grad()
             loss = self._compute_forward_dynamics_loss(sample)
             loss.backward()
