@@ -25,6 +25,7 @@ class TrajectoryBuffer:
         self.features_buffer: deque[torch.Tensor] = deque([], maxlen=max_buffer_size)
         self.actions_buffer: deque[torch.Tensor] = deque([], maxlen=max_buffer_size)
         self.rewards_buffer: deque[float] = deque([], maxlen=max_buffer_size)
+        self.intrinsic_rewards_buffer: deque[float] = deque([], maxlen=max_buffer_size)
         self.values_buffer: deque[float] = deque([], maxlen=max_buffer_size)
         self.log_probs_buffer: deque[torch.Tensor] = deque([], maxlen=max_buffer_size)
 
@@ -36,6 +37,7 @@ class TrajectoryBuffer:
         visual_features: torch.Tensor,
         action: torch.Tensor,
         reward: float,
+        intrinsic_reward: float,
         value: float,
         log_prob: torch.Tensor,
     ) -> None:
@@ -50,6 +52,8 @@ class TrajectoryBuffer:
             Action tensor for the MineDojo environment + the region of interest (x,y) coordinates
         reward : float
             Reward value from the environment for the previous action
+        intrinsic_reward : float
+            Reward value from the Intrinsic Curiosity Module (ICM)
         value : float
             Value assigned to the observation by the agent
         log_prob : torch.Tensor
@@ -58,5 +62,6 @@ class TrajectoryBuffer:
         self.features_buffer.append(visual_features)
         self.actions_buffer.append(action)
         self.rewards_buffer.append(reward)
+        self.intrinsic_rewards_buffer.append(intrinsic_reward)
         self.values_buffer.append(value)
         self.log_probs_buffer.append(log_prob)

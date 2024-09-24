@@ -10,6 +10,7 @@ from mvi.config import (
     parse_config,
     update_config,
     PPOConfig,
+    ICMConfig,
     EngineConfig,
     AgentConfig,
     Config,
@@ -31,6 +32,14 @@ def test_ppo_config():
     agent = AgentV1(config.agent, ACTION_SPACE)
 
     # Comparison
+    assert (
+        agent.icm.forward_dynamics_optimizer.param_groups[-1]["lr"]
+        == config_dict["agent"]["icm"]["forward_dynamics_lr"]
+    )
+    assert (
+        agent.icm.inverse_dynamics_optimizer.param_groups[-1]["lr"]
+        == config_dict["agent"]["icm"]["inverse_dynamics_lr"]
+    )
     assert agent.ppo.clip_ratio == config_dict["agent"]["ppo"]["clip_ratio"]
     assert agent.ppo.target_kl == config_dict["agent"]["ppo"]["target_kl"]
     assert (
@@ -90,7 +99,9 @@ def test_parse_config():
 
 
 def test_update_config():
-    config = Config(engine=EngineConfig(), agent=AgentConfig(ppo=PPOConfig()))
+    config = Config(
+        engine=EngineConfig(), agent=AgentConfig(ppo=PPOConfig(), icm=ICMConfig())
+    )
 
     # Other - empty list
     before_change = deepcopy(config)

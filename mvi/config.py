@@ -60,6 +60,29 @@ class PPOConfig:
 
 
 @dataclass
+class ICMConfig:
+    """
+    Configuration definition for the ICM learning algorithm
+
+    Attributes
+    ----------
+    scaling_factor : float, optional
+        Used to scale the influence of curiosity on the reward signal
+        (must be > 0)
+    inverse_dynamics_lr : float, optional
+        Learning rate for the inverse dynamics module
+    forward_dynamics_lr : float, optional
+        Learning rate for the forward dynamics module
+    """
+
+    scaling_factor: float = 1.0
+    train_inverse_dynamics_iters: int = 80
+    train_forward_dynamics_iters: int = 80
+    inverse_dynamics_lr: float = 1.0e-3
+    forward_dynamics_lr: float = 1.0e-3
+
+
+@dataclass
 class AgentConfig:
     """
     Configuration definitions for the agent
@@ -75,6 +98,7 @@ class AgentConfig:
     """
 
     ppo: PPOConfig
+    icm: ICMConfig
     max_buffer_size: int = 50
     roi_shape: tuple[int, int] = (32, 32)
 
@@ -101,7 +125,9 @@ def get_config() -> Config:
     if arguments.file is not None:
         config = parse_config(arguments.file)
     else:
-        config = Config(engine=EngineConfig(), agent=AgentConfig(ppo=PPOConfig()))
+        config = Config(
+            engine=EngineConfig(), agent=AgentConfig(ppo=PPOConfig(), icm=ICMConfig())
+        )
     if arguments.key_value_pairs is not None:
         update_config(config, arguments.key_value_pairs)
     return config
