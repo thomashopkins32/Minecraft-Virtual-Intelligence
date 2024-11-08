@@ -6,8 +6,10 @@ from gymnasium.spaces import MultiDiscrete
 
 from mvi.perception.visual import VisualPerception
 from mvi.affector.affector import LinearAffector
-from mvi.reasoning.critic import LinearReasoner
+from mvi.reasoning.critic import LinearCritic
+from mvi.reasoning.dynamics import InverseDynamics, ForwardDynamics
 from mvi.memory.trajectory import TrajectoryBuffer
+from mvi.learning.icm import ICM
 from mvi.learning.ppo import PPO
 from mvi.config import AgentConfig
 from mvi.utils import sample_action
@@ -25,13 +27,19 @@ class AgentV1:
     def __init__(self, config: AgentConfig, action_space: MultiDiscrete):
         self.vision = VisualPerception(out_channels=32)
         self.affector = LinearAffector(32 + 32, action_space)
-        self.reasoner = LinearReasoner(32 + 32)
+        self.critic = LinearCritic(32 + 32)
         self.memory = TrajectoryBuffer(config.max_buffer_size)
-        self.ppo = PPO(self.affector, self.reasoner, config.ppo)
+        self.inverse_dynamics = InverseDynamics(32 + 32, action_space)
+        self.forward_dynamics = ForwardDynamics(32 + 32, action_space.shape[0] + 2)
+        self.ppo = PPO(self.affector, self.critic, config.ppo)
+        self.icm = ICM(self.forward_dynamics, self.inverse_dynamics, config.icm)
         self.config = config
 
         # region of interest initialization
         self.roi_action: Union[torch.Tensor, None] = None
+        self.prev_visual_features: torch.Tensor = torch.zeros(
+            (1, 64), dtype=torch.float
+        )
 
     def _transform_observation(self, obs: torch.Tensor) -> torch.Tensor:
         if self.roi_action is None:
@@ -39,8 +47,8 @@ class AgentV1:
         else:
             roi_obs = crop(
                 obs,
-                self.roi_action[0],
-                self.roi_action[1],
+                self.roi_action[:, 0],
+                self.roi_action[:, 1],
                 self.config.roi_shape[0],
                 self.config.roi_shape[1],
             )
@@ -52,14 +60,25 @@ class AgentV1:
         with torch.no_grad():
             visual_features = self.vision(obs, roi_obs)
             actions = self.affector(visual_features)
-            value = self.reasoner(visual_features)
+            value = self.critic(visual_features)
         action, logp_action = sample_action(actions)
-        self.roi_action = action[-2:]
+        self.roi_action = action[:, -2:].round().long()
 
-        self.memory.store(visual_features, action, reward, value, logp_action)
+        # Get the intrinsic reward associated with the previous observation
+        with torch.no_grad():
+            intrinsic_reward = self.icm.intrinsic_reward(
+                self.prev_visual_features, action, visual_features
+            )
+
+        self.memory.store(
+            visual_features, action, reward, intrinsic_reward, value, logp_action
+        )
 
         # Once the trajectory buffer is full, we can start learning
         if len(self.memory) == self.config.max_buffer_size:
             self.ppo.update(self.memory)
+            self.icm.update(self.memory)
 
-        return action[:-2]
+        self.prev_visual_features = visual_features
+
+        return action[:, :-2].long()

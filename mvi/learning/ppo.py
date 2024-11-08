@@ -4,6 +4,7 @@ from dataclasses import dataclass
 import numpy as np
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import torch.optim as optim
 
 from mvi.utils import joint_logp_action, discount_cumsum
@@ -155,7 +156,7 @@ class PPO:
             data.returns,
         )
         v = self.critic(feat)
-        return ((v - ret) ** 2).mean()
+        return F.mse_loss(v, ret)
 
     def _update_critic(self, data: PPOSample) -> None:
         self.critic.train()
@@ -188,7 +189,9 @@ class PPO:
         log_probabilities = torch.stack(list(data.log_probs_buffer)[:-1])
         # Cannot use the first reward value since we no longer have the associated feature
         # The reward for a_t is at r_{t+1}
-        rewards = torch.tensor(list(data.rewards_buffer)[1:])
+        env_rewards = torch.tensor(list(data.rewards_buffer)[1:])
+        intrinsic_rewards = torch.tensor(list(data.intrinsic_rewards_buffer)[1:])
+        rewards = env_rewards + intrinsic_rewards
         # Need all values since the final one is used to estimate future reward
         values = torch.tensor(list(data.values_buffer))
 
@@ -196,11 +199,13 @@ class PPO:
         advantages = torch.tensor(
             discount_cumsum(
                 deltas.numpy(), self.discount_factor * self.gae_discount_factor
-            ).copy()
+            ).copy(),
+            dtype=torch.float,
         )
         returns = torch.tensor(
-            discount_cumsum(rewards.numpy(), self.discount_factor).copy()
-        ).squeeze()
+            discount_cumsum(rewards.numpy(), self.discount_factor).copy(),
+            dtype=torch.float,
+        ).unsqueeze(1)
 
         return PPOSample(
             features=features,
