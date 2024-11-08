@@ -20,7 +20,7 @@ def run() -> None:
     obs = torch.tensor(env.reset()["rgb"].copy(), dtype=torch.float).unsqueeze(0)
     total_return = 0.0
     for s in range(engine_config.max_steps):
-        action = agent.act(obs)
+        action = agent.act(obs).squeeze(0)
         next_obs, reward, _, _ = env.step(action)
         total_return += reward
         obs = torch.tensor(next_obs["rgb"].copy(), dtype=torch.float).unsqueeze(0)

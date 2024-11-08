@@ -25,12 +25,12 @@ def agent_v1_module():
     return AgentV1(AgentConfig(ppo=PPOConfig(), icm=ICMConfig()), ACTION_SPACE)
 
 
-def test_agent_v1_act(agent_v1_module: AgentV1):
+def test_agent_v1_act_single(agent_v1_module: AgentV1):
     input_tensor = torch.randn((1, 3, 160, 256))
 
     action = agent_v1_module.act(input_tensor)
 
-    assert len(action) == 8
+    assert action.shape == (1, 8)
 
 
 def test_agent_v1_params(agent_v1_module: AgentV1):

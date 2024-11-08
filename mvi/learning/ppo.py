@@ -205,7 +205,7 @@ class PPO:
         returns = torch.tensor(
             discount_cumsum(rewards.numpy(), self.discount_factor).copy(),
             dtype=torch.float,
-        ).squeeze()
+        ).unsqueeze(1)
 
         return PPOSample(
             features=features,

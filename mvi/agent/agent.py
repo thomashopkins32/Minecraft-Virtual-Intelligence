@@ -37,7 +37,7 @@ class AgentV1:
 
         # region of interest initialization
         self.roi_action: Union[torch.Tensor, None] = None
-        self.prev_visual_features: torch.Tensor = torch.zeros((64,), dtype=torch.float)
+        self.prev_visual_features: torch.Tensor = torch.zeros((1, 64), dtype=torch.float)
 
     def _transform_observation(self, obs: torch.Tensor) -> torch.Tensor:
         if self.roi_action is None:
@@ -45,8 +45,8 @@ class AgentV1:
         else:
             roi_obs = crop(
                 obs,
-                self.roi_action[0],
-                self.roi_action[1],
+                self.roi_action[:, 0],
+                self.roi_action[:, 1],
                 self.config.roi_shape[0],
                 self.config.roi_shape[1],
             )
@@ -60,7 +60,7 @@ class AgentV1:
             actions = self.affector(visual_features)
             value = self.critic(visual_features)
         action, logp_action = sample_action(actions)
-        self.roi_action = action[-2:]
+        self.roi_action = action[:, -2:].round().long()
 
         # Get the intrinsic reward associated with the previous observation
         with torch.no_grad():
@@ -77,4 +77,6 @@ class AgentV1:
             self.ppo.update(self.memory)
             self.icm.update(self.memory)
 
-        return action[:-2]
+        self.prev_visual_features = visual_features
+
+        return action[:, :-2].long()
