@@ -12,7 +12,10 @@ from tests.helper import ACTION_SPACE
 def icm_module() -> ICM:
     agent = AgentV1(
         AgentConfig(
-            ppo=PPOConfig(), icm=ICMConfig(train_forward_dynamics_iters=2, train_inverse_dynamics_iters=2)
+            ppo=PPOConfig(),
+            icm=ICMConfig(
+                train_forward_dynamics_iters=2, train_inverse_dynamics_iters=2
+            ),
         ),
         ACTION_SPACE,
     )

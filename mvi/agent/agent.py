@@ -37,7 +37,9 @@ class AgentV1:
 
         # region of interest initialization
         self.roi_action: Union[torch.Tensor, None] = None
-        self.prev_visual_features: torch.Tensor = torch.zeros((1, 64), dtype=torch.float)
+        self.prev_visual_features: torch.Tensor = torch.zeros(
+            (1, 64), dtype=torch.float
+        )
 
     def _transform_observation(self, obs: torch.Tensor) -> torch.Tensor:
         if self.roi_action is None:

@@ -6,7 +6,10 @@ from mvi.config import AgentConfig, PPOConfig, ICMConfig
 from tests.perception.test_visual import VISUAL_EXPECTED_PARAMS
 from tests.affector.test_affector import LINEAR_AFFECTOR_EXPECTED_PARAMS
 from tests.reasoning.test_critic import LINEAR_CRITIC_EXPECTED_PARAMS
-from tests.reasoning.test_dynamics import FORWARD_DYNAMICS_EXPECTED_PARAMS, INVERSE_DYNAMICS_EXPECTED_PARAMS
+from tests.reasoning.test_dynamics import (
+    FORWARD_DYNAMICS_EXPECTED_PARAMS,
+    INVERSE_DYNAMICS_EXPECTED_PARAMS,
+)
 from tests.helper import ACTION_SPACE
 
 

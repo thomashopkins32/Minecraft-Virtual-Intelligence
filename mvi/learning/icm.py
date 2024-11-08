@@ -149,8 +149,12 @@ class ICM:
             + F.nll_loss(torch.log(actions_pred[5]), actions[:, 5])
             + F.nll_loss(torch.log(actions_pred[6]), actions[:, 6])
             + F.nll_loss(torch.log(actions_pred[7]), actions[:, 7])
-            + F.gaussian_nll_loss(actions_pred[8][:, 0], actions[:, 8], actions_pred[9][:, 0] ** 2)
-            + F.gaussian_nll_loss(actions_pred[8][:, 1], actions[:, 9], actions_pred[9][:, 1] ** 2)
+            + F.gaussian_nll_loss(
+                actions_pred[8][:, 0], actions[:, 8], actions_pred[9][:, 0] ** 2
+            )
+            + F.gaussian_nll_loss(
+                actions_pred[8][:, 1], actions[:, 9], actions_pred[9][:, 1] ** 2
+            )
         )
 
     def _update_inverse_dynamics(self, data: ICMSample) -> None:
