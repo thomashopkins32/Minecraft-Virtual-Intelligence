@@ -203,3 +203,9 @@ class ICM:
         sample = self._finalize_trajectory(data)
         self._update_inverse_dynamics(sample)
         self._update_forward_dynamics(sample)
+
+    def compute_loss(self, features: torch.Tensor, next_features: torch.Tensor, actions: torch.Tensor) -> torch.Tensor:
+        sample = ICMSample(features, next_features, actions)
+        forward_dynamics_loss = self._compute_forward_dynamics_loss(sample)
+        inverse_dynamics_loss = self._compute_inverse_dynamics_loss(sample)
+        return forward_dynamics_loss + inverse_dynamics_loss
