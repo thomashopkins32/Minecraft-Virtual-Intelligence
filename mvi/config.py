@@ -60,6 +60,15 @@ class PPOConfig:
 
 
 @dataclass
+class TDConfig:
+    """Configuration definition for the Temporal Difference Actor Critic learning algorithm"""
+
+    discount_factor: float = 0.99
+    actor_lr: float = 1.0e-3
+    critic_lr: float = 1.0e-3
+
+
+@dataclass
 class ICMConfig:
     """
     Configuration definition for the ICM learning algorithm
