@@ -27,10 +27,10 @@ class TemporalDifferenceActorCritic:
         self.discount_factor = config.discount_factor
 
     def _compute_actor_loss(
-        self, action_logp: torch.Tensor, delta: torch.Tensor
+        self, action_logp: torch.Tensor, delta: torch.Tensor, current_time_step: int
     ) -> torch.Tensor:
         """Simple policy gradient loss"""
-        loss = -delta * action_logp
+        loss = -self.discount_factor**current_time_step * delta * action_logp
         return loss
 
     def _compute_critic_loss(self, delta: torch.Tensor) -> torch.Tensor:
@@ -53,11 +53,11 @@ class TemporalDifferenceActorCritic:
         action_logp: torch.Tensor,
         reward: float,
         next_features: torch.Tensor,
+        current_time_step: int = 1,
     ) -> torch.Tensor:
         """Updates the actor and critic models given the a trajectory"""
-        # TODO: Figure out if we need to compute discount ** time_step here
         delta = self._compute_delta(value, reward, next_features)
-        actor_loss = self._compute_actor_loss(action_logp, delta)
+        actor_loss = self._compute_actor_loss(action_logp, delta, current_time_step)
         critic_loss = self._compute_critic_loss(delta)
 
         return actor_loss + critic_loss
