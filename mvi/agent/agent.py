@@ -11,9 +11,8 @@ from mvi.reasoning.dynamics import InverseDynamics, ForwardDynamics
 from mvi.memory.trajectory import TrajectoryBuffer
 from mvi.learning.icm import ICM
 from mvi.learning.ppo import PPO
-from mvi.learning.td import TemporalDifferenceActorCritic
 from mvi.config import AgentConfig
-from mvi.utils import sample_action, joint_logp_action
+from mvi.utils import sample_action
 
 
 class AgentV1:
@@ -33,16 +32,14 @@ class AgentV1:
         self.inverse_dynamics = InverseDynamics(32 + 32, action_space)
         self.forward_dynamics = ForwardDynamics(32 + 32, action_space.shape[0] + 2)
         self.ppo = PPO(self.affector, self.critic, config.ppo)
-        self.td = TemporalDifferenceActorCritic(self.affector, self.critic, config.td)
         self.icm = ICM(self.forward_dynamics, self.inverse_dynamics, config.icm)
         self.config = config
 
         # region of interest initialization
         self.roi_action: Union[torch.Tensor, None] = None
-        self.prev_action_logp: Union[torch.Tensor, None] = None
-        self.prev_value: Union[torch.Tensor, None] = None
-        self.prev_visual_features: Union[torch.Tensor, None] = None
-
+        self.prev_visual_features: torch.Tensor = torch.zeros(
+            (1, 64), dtype=torch.float
+        )
 
     def _transform_observation(self, obs: torch.Tensor) -> torch.Tensor:
         if self.roi_action is None:
@@ -58,46 +55,30 @@ class AgentV1:
         return roi_obs
 
     def act(self, obs: torch.Tensor, reward: float = 0.0) -> torch.Tensor:
+
         roi_obs = self._transform_observation(obs)
-        visual_features = self.vision(obs, roi_obs)
-
-        # TODO: Separate into separate functions for online and offline learning
-        if self.prev_visual_features is not None and self.prev_action_logp is not None and self.prev_value is not None:
-            td_loss = self.td.loss(self.prev_value, self.prev_action_logp, reward, visual_features.clone().detach())
-            # TODO: Implement ICM loss for online learning
-            icm_loss = self.icm.loss(self.prev_visual_features, , visual_features.clone().detach())
-            loss = td_loss + icm_loss
-            loss.backward()
-            # TODO: Construct end-to-end online optimizer for agent
-            self.optimizer.step()
-
-        actions = self.affector(visual_features)
-        value = self.critic(visual_features)
-        action = sample_action(actions)
-        logp_action = joint_logp_action(actions, action)
+        with torch.no_grad():
+            visual_features = self.vision(obs, roi_obs)
+            actions = self.affector(visual_features)
+            value = self.critic(visual_features)
+        action, logp_action = sample_action(actions)
         self.roi_action = action[:, -2:].round().long()
 
         # Get the intrinsic reward associated with the previous observation
-        # TODO: Possible off by one error with intrinsic rewards??
-        if self.prev_visual_features is not None:
+        with torch.no_grad():
             intrinsic_reward = self.icm.intrinsic_reward(
                 self.prev_visual_features, action, visual_features
             )
-        else:
-            intrinsic_reward = 0.0
 
         self.memory.store(
             visual_features, action, reward, intrinsic_reward, value, logp_action
         )
 
-        # Once the trajectory buffer is full, we can start learning offline
+        # Once the trajectory buffer is full, we can start learning
         if len(self.memory) == self.config.max_buffer_size:
             self.ppo.update(self.memory)
             self.icm.update(self.memory)
 
         self.prev_visual_features = visual_features
-        self.prev_action_logp = logp_action
-        self.prev_value = value
 
-        # Return the action suitable for the environment
         return action[:, :-2].long()
