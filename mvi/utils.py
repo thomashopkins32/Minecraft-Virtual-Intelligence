@@ -131,7 +131,7 @@ def sample_action(
         torch.Tensor,
         torch.Tensor,
     ]
-) -> torch.Tensor:
+) -> Tuple[torch.Tensor, torch.Tensor]:
     """
     Samples actions from the various distributions and combines them into an action tensor.
     Outputs the action tensor and a logp tensor showing the log probability of taking that action.
@@ -156,38 +156,38 @@ def sample_action(
     action = torch.zeros((batch_size, 10), dtype=torch.float)
     logp_action = torch.zeros((batch_size, 10), dtype=torch.float)
 
-    action[batch_indices, 0], _ = sample_multinomial(
+    action[batch_indices, 0], logp_action[batch_indices, 0] = sample_multinomial(
         action_dists[0][:], torch.float
     )
-    action[batch_indices, 1], _ = sample_multinomial(
+    action[batch_indices, 1], logp_action[batch_indices, 1] = sample_multinomial(
         action_dists[1][:], torch.float
     )
-    action[batch_indices, 2], _ = sample_multinomial(
+    action[batch_indices, 2], logp_action[batch_indices, 2] = sample_multinomial(
         action_dists[2][:], torch.float
     )
-    action[batch_indices, 3], _ = sample_multinomial(
+    action[batch_indices, 3], logp_action[batch_indices, 3] = sample_multinomial(
         action_dists[3][:], torch.float
     )
-    action[batch_indices, 4], _ = sample_multinomial(
+    action[batch_indices, 4], logp_action[batch_indices, 4] = sample_multinomial(
         action_dists[4][:], torch.float
     )
-    action[batch_indices, 5], _ = sample_multinomial(
+    action[batch_indices, 5], logp_action[batch_indices, 5] = sample_multinomial(
         action_dists[5][:], torch.float
     )
-    action[batch_indices, 6], _ = sample_multinomial(
+    action[batch_indices, 6], logp_action[batch_indices, 6] = sample_multinomial(
         action_dists[6][:], torch.float
     )
-    action[batch_indices, 7], _ = sample_multinomial(
+    action[batch_indices, 7], logp_action[batch_indices, 7] = sample_multinomial(
         action_dists[7][:], torch.float
     )
-    action[batch_indices, 8], _ = sample_guassian(
+    action[batch_indices, 8], logp_action[batch_indices, 8] = sample_guassian(
         action_dists[8][:, 0], action_dists[9][:, 0]
     )
-    action[batch_indices, 9], _ = sample_guassian(
+    action[batch_indices, 9], logp_action[batch_indices, 9] = sample_guassian(
         action_dists[8][:, 1], action_dists[9][:, 1]
     )
 
-    return action
+    return action, logp_action
 
 
 def joint_logp_action(
