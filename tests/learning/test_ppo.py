@@ -2,7 +2,7 @@ import pytest
 from mvi.agent.agent import AgentV1
 import torch
 from mvi.learning.ppo import PPO
-from mvi.config import AgentConfig, PPOConfig, ICMConfig
+from mvi.config import AgentConfig, PPOConfig, ICMConfig, TDConfig
 from mvi.memory.trajectory import TrajectoryBuffer
 
 from tests.helper import ACTION_SPACE
@@ -12,7 +12,9 @@ from tests.helper import ACTION_SPACE
 def ppo_module() -> PPO:
     agent = AgentV1(
         AgentConfig(
-            ppo=PPOConfig(train_actor_iters=2, train_critic_iters=2), icm=ICMConfig()
+            ppo=PPOConfig(train_actor_iters=2, train_critic_iters=2),
+            icm=ICMConfig(),
+            td=TDConfig(),
         ),
         ACTION_SPACE,
     )

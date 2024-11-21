@@ -64,8 +64,6 @@ class TDConfig:
     """Configuration definition for the Temporal Difference Actor Critic learning algorithm"""
 
     discount_factor: float = 0.99
-    actor_lr: float = 1.0e-3
-    critic_lr: float = 1.0e-3
 
 
 @dataclass
@@ -108,6 +106,7 @@ class AgentConfig:
 
     ppo: PPOConfig
     icm: ICMConfig
+    td: TDConfig
     max_buffer_size: int = 50
     roi_shape: tuple[int, int] = (32, 32)
 
@@ -135,7 +134,8 @@ def get_config() -> Config:
         config = parse_config(arguments.file)
     else:
         config = Config(
-            engine=EngineConfig(), agent=AgentConfig(ppo=PPOConfig(), icm=ICMConfig())
+            engine=EngineConfig(),
+            agent=AgentConfig(ppo=PPOConfig(), icm=ICMConfig(), td=TDConfig()),
         )
     if arguments.key_value_pairs is not None:
         update_config(config, arguments.key_value_pairs)

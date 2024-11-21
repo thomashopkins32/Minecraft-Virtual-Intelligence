@@ -25,15 +25,6 @@ class TemporalDifferenceActorCritic:
 
         # Learning hyperpaameters
         self.discount_factor = config.discount_factor
-        # TODO: Figure out if we need these
-        self.actor_optim = optim.Adam(
-            self.actor.parameters(),
-            lr=config.actor_lr,
-        )
-        self.critic_optim = optim.Adam(
-            self.critic.parameters(),
-            lr=config.critic_lr,
-        )
 
     def _compute_actor_loss(
         self, action_logp: torch.Tensor, delta: torch.Tensor

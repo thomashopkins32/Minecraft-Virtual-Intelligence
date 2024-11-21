@@ -23,5 +23,7 @@ agent:
     train_inverse_dynamics_iters: 80
     inverse_dynamics_lr: 1.0e-3
     forward_dynamics_lr: 1.0e-3
+  td:
+    discount_factor: 0.99
   max_buffer_size: 50
   roi_shape: !!python/tuple [32, 32]

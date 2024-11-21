@@ -1,4 +1,3 @@
-import os
 from dataclasses import asdict
 from copy import deepcopy
 
@@ -11,24 +10,22 @@ from mvi.config import (
     update_config,
     PPOConfig,
     ICMConfig,
+    TDConfig,
     EngineConfig,
     AgentConfig,
     Config,
 )
-from tests.helper import ACTION_SPACE
+from tests.helper import ACTION_SPACE, CONFIG_PATH
 
 
 def test_ppo_config():
     """Test consistency between configuration and PPO algorithm"""
-    project_root = os.path.abspath(os.path.join(__file__, "..", ".."))
-    template_path = os.path.join(project_root, "templates", "config.yaml")
-
     # Base template (expected values)
-    with open(template_path, "r") as fp:
+    with open(CONFIG_PATH, "r") as fp:
         config_dict = yaml.load(fp, yaml.Loader)
 
     # Parsing
-    config = parse_config(template_path)
+    config = parse_config(CONFIG_PATH)
     agent = AgentV1(config.agent, ACTION_SPACE)
 
     # Comparison
@@ -60,15 +57,12 @@ def test_ppo_config():
 
 
 def test_parse_config():
-    project_root = os.path.abspath(os.path.join(__file__, "..", ".."))
-    template_path = os.path.join(project_root, "templates", "config.yaml")
-
     # Base template (expected values)
-    with open(template_path, "r") as fp:
+    with open(CONFIG_PATH, "r") as fp:
         config_dict = yaml.load(fp, yaml.Loader)
 
     # Parsing
-    config = parse_config(template_path)
+    config = parse_config(CONFIG_PATH)
 
     # Comparison
     assert (
@@ -100,7 +94,8 @@ def test_parse_config():
 
 def test_update_config():
     config = Config(
-        engine=EngineConfig(), agent=AgentConfig(ppo=PPOConfig(), icm=ICMConfig())
+        engine=EngineConfig(),
+        agent=AgentConfig(ppo=PPOConfig(), icm=ICMConfig(), td=TDConfig()),
     )
 
     # Other - empty list

@@ -1,8 +1,12 @@
+import os
+
 import numpy as np
 import gymnasium
 from gymnasium import spaces
 
 
+PROJECT_ROOT = os.path.abspath(os.path.join(__file__, "..", ".."))
+CONFIG_PATH = os.path.join(PROJECT_ROOT, "config_templates", "config.yaml")
 ACTION_SPACE = spaces.MultiDiscrete([3, 3, 4, 25, 25, 8, 244, 36])
 
 
