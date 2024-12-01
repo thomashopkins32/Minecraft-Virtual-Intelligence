@@ -8,19 +8,16 @@ from mvi.config import TDConfig
 class TemporalDifferenceActorCritic:
     """One-step actor-critic learning algorithm"""
 
-    def __init__(self, actor: nn.Module, critic: nn.Module, config: TDConfig):
+    def __init__(self, critic: nn.Module, config: TDConfig):
         """
         Parameters
         ----------
-        actor : nn.Module
-            Neural network for the actor
         critic : nn.Module
             Neural network for the critic
         config : TDConfig
             Configuration for the Temporal Difference Actor Critic algorithm
         """
-        # Actor & critic
-        self.actor = actor
+        # Critic
         self.critic = critic
 
         # Learning hyperpaameters
