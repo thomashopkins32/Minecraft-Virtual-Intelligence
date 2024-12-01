@@ -2,7 +2,7 @@ import pytest
 import torch
 
 from mvi.agent.agent import AgentV1
-from mvi.config import AgentConfig, PPOConfig, ICMConfig
+from mvi.config import AgentConfig, PPOConfig, ICMConfig, TDConfig
 from tests.perception.test_visual import VISUAL_EXPECTED_PARAMS
 from tests.affector.test_affector import LINEAR_AFFECTOR_EXPECTED_PARAMS
 from tests.reasoning.test_critic import LINEAR_CRITIC_EXPECTED_PARAMS
@@ -25,7 +25,9 @@ AGENT_V1_EXPECTED_PARAMS = (
 
 @pytest.fixture
 def agent_v1_module():
-    return AgentV1(AgentConfig(ppo=PPOConfig(), icm=ICMConfig()), ACTION_SPACE)
+    return AgentV1(
+        AgentConfig(ppo=PPOConfig(), icm=ICMConfig(), td=TDConfig()), ACTION_SPACE
+    )
 
 
 def test_agent_v1_act_single(agent_v1_module: AgentV1):
