@@ -32,13 +32,15 @@ def test_loss(td_module_with_mocked_critic: TemporalDifferenceActorCritic) -> No
         requires_grad=True,
     )
     next_state_features = torch.zeros((64,), dtype=torch.float)
-    logp_action = torch.log(torch.tensor(
-        [
-            0.95,
-        ],
-        dtype=torch.float,
-        requires_grad=True,
-    ))
+    logp_action = torch.log(
+        torch.tensor(
+            [
+                0.95,
+            ],
+            dtype=torch.float,
+            requires_grad=True,
+        )
+    )
     reward = 1000.0
     time_step = 10
 
