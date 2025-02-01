@@ -43,6 +43,13 @@ class AgentV1:
             (1, 64), dtype=torch.float
         )
 
+        # Apply monitoring to all module forward passes
+        self.vision.forward = self.monitor.monitor_module("vision")(self.vision.forward)
+        self.affector.forward = self.monitor.monitor_module("affector")(self.affector.forward)
+        self.critic.forward = self.monitor.monitor_module("critic")(self.critic.forward)
+        self.inverse_dynamics.forward = self.monitor.monitor_module("inverse_dynamics")(self.inverse_dynamics.forward)
+        self.forward_dynamics.forward = self.monitor.monitor_module("forward_dynamics")(self.forward_dynamics.forward)
+
     def _transform_observation(self, obs: torch.Tensor) -> torch.Tensor:
         if self.roi_action is None:
             roi_obs = center_crop(obs, self.config.roi_shape)
@@ -81,6 +88,14 @@ class AgentV1:
             self.icm.update(self.memory)
 
         self.prev_visual_features = visual_features
+
+        # Monitor parameters after updates
+        if len(self.memory) == self.config.max_buffer_size:
+            self.monitor.monitor_parameters("vision", self.vision)
+            self.monitor.monitor_parameters("affector", self.affector)
+            self.monitor.monitor_parameters("critic", self.critic)
+            self.monitor.monitor_parameters("inverse_dynamics", self.inverse_dynamics)
+            self.monitor.monitor_parameters("forward_dynamics", self.forward_dynamics)
 
         # Log metrics
         self.monitor.log({

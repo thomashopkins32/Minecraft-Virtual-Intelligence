@@ -93,7 +93,7 @@ class ICMConfig:
 class MonitorConfig:
     enabled: bool = True
     log_dir: str = "runs/minecraft_agent"
-    log_frequency: int = 1  # How often to log metrics
+    log_frequency: int = 1
     metrics: List[str] = field(default_factory=lambda: [
         "reward",
         "intrinsic_reward",
@@ -101,6 +101,9 @@ class MonitorConfig:
         "action_dist",
         "roi_position"
     ])
+    monitor_parameters: bool = True
+    monitor_gradients: bool = True
+    histogram_frequency: int = 100
 
 
 @dataclass
@@ -152,7 +155,19 @@ def get_config() -> Config:
     else:
         config = Config(
             engine=EngineConfig(),
-            agent=AgentConfig(ppo=PPOConfig(), icm=ICMConfig(), td=TDConfig()),
+            agent=AgentConfig(
+                ppo=PPOConfig(),
+                icm=ICMConfig(),
+                td=TDConfig(),
+                monitor=MonitorConfig(
+                    enabled=True,
+                    log_dir="runs/full_observability",
+                    log_frequency=10,
+                    monitor_parameters=True,
+                    monitor_gradients=True,
+                    histogram_frequency=100
+                )
+            ),
         )
     if arguments.key_value_pairs is not None:
         update_config(config, arguments.key_value_pairs)
