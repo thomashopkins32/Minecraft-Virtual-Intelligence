@@ -1,7 +1,7 @@
 from collections.abc import Iterable
-from dataclasses import dataclass, is_dataclass
+from dataclasses import dataclass, is_dataclass, field
 import argparse
-from typing import Any
+from typing import Any, List
 
 import yaml
 from dacite import from_dict
@@ -90,6 +90,20 @@ class ICMConfig:
 
 
 @dataclass
+class MonitorConfig:
+    enabled: bool = True
+    log_dir: str = "runs/minecraft_agent"
+    log_frequency: int = 1  # How often to log metrics
+    metrics: List[str] = field(default_factory=lambda: [
+        "reward",
+        "intrinsic_reward",
+        "value",
+        "action_dist",
+        "roi_position"
+    ])
+
+
+@dataclass
 class AgentConfig:
     """
     Configuration definitions for the agent
@@ -102,6 +116,8 @@ class AgentConfig:
         Trajectory buffer capacity prior to model updates
     roi_shape : tuple[int, int], optional
         Height and width of region of interest for visual perception
+    monitor : MonitorConfig
+        Configuration for monitoring metrics
     """
 
     ppo: PPOConfig
@@ -109,6 +125,7 @@ class AgentConfig:
     td: TDConfig
     max_buffer_size: int = 50
     roi_shape: tuple[int, int] = (32, 32)
+    monitor: MonitorConfig = field(default_factory=MonitorConfig)
 
 
 @dataclass

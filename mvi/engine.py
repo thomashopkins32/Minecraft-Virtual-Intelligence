@@ -1,9 +1,9 @@
 import torch
+from torch.utils.tensorboard import SummaryWriter
 import minedojo  # type: ignore
 
 from mvi.agent.agent import AgentV1
 from mvi.config import get_config
-
 
 def run() -> None:
     """
@@ -19,11 +19,17 @@ def run() -> None:
 
     obs = torch.tensor(env.reset()["rgb"].copy(), dtype=torch.float).unsqueeze(0)
     total_return = 0.0
-    for s in range(engine_config.max_steps):
-        action = agent.act(obs).squeeze(0)
-        next_obs, reward, _, _ = env.step(action)
-        total_return += reward
-        obs = torch.tensor(next_obs["rgb"].copy(), dtype=torch.float).unsqueeze(0)
+    try:
+        for s in range(engine_config.max_steps):
+            action = agent.act(obs).squeeze(0)
+            next_obs, reward, _, _ = env.step(action)
+            total_return += reward
+
+            obs = torch.tensor(next_obs["rgb"].copy(), dtype=torch.float).unsqueeze(0)
+    finally:
+        agent.close()
+        env.close()
+
 
 
 if __name__ == "__main__":

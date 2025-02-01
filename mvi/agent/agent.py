@@ -13,6 +13,7 @@ from mvi.learning.icm import ICM
 from mvi.learning.ppo import PPO
 from mvi.config import AgentConfig
 from mvi.utils import sample_action
+from mvi.monitoring import AgentMonitor
 
 
 class AgentV1:
@@ -34,6 +35,7 @@ class AgentV1:
         self.ppo = PPO(self.affector, self.critic, config.ppo)
         self.icm = ICM(self.forward_dynamics, self.inverse_dynamics, config.icm)
         self.config = config
+        self.monitor = AgentMonitor(config.monitor)
 
         # region of interest initialization
         self.roi_action: Union[torch.Tensor, None] = None
@@ -55,7 +57,6 @@ class AgentV1:
         return roi_obs
 
     def act(self, obs: torch.Tensor, reward: float = 0.0) -> torch.Tensor:
-
         roi_obs = self._transform_observation(obs)
         with torch.no_grad():
             visual_features = self.vision(obs, roi_obs)
@@ -81,4 +82,18 @@ class AgentV1:
 
         self.prev_visual_features = visual_features
 
+        # Log metrics
+        self.monitor.log({
+            "reward": reward,
+            "intrinsic_reward": intrinsic_reward,
+            "value": value,
+            "action_dist": actions.mean(),  # or any other action distribution metric
+            "roi_position": self.roi_action.float().mean(),
+        })
+        self.monitor.increment_step()
+
         return action[:, :-2].long()
+
+    def close(self):
+        """Add a method to properly close the monitor"""
+        self.monitor.close()
