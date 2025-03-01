@@ -12,7 +12,9 @@ class InverseDynamics(nn.Module):
         # Multiply by 2 since we are concatenating the current obs and the next obs
         self.affector = LinearAffector(embed_dim * 2, action_space)
 
-    def forward(self, x1: torch.Tensor, x2: torch.Tensor) -> tuple[
+    def forward(
+        self, x1: torch.Tensor, x2: torch.Tensor
+    ) -> tuple[
         torch.Tensor,
         torch.Tensor,
         torch.Tensor,

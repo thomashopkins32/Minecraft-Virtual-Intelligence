@@ -130,7 +130,7 @@ def sample_action(
         torch.Tensor,
         torch.Tensor,
         torch.Tensor,
-    ]
+    ],
 ) -> Tuple[torch.Tensor, torch.Tensor]:
     """
     Samples actions from the various distributions and combines them into an action tensor.

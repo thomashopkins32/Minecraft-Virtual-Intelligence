@@ -51,7 +51,9 @@ class LinearAffector(nn.Module):
         self.softplus = nn.Softplus()
         self.action_space = action_space
 
-    def forward(self, x: torch.Tensor) -> tuple[
+    def forward(
+        self, x: torch.Tensor
+    ) -> tuple[
         torch.Tensor,
         torch.Tensor,
         torch.Tensor,

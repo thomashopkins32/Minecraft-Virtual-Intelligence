@@ -192,7 +192,6 @@ def parse_value(value: str) -> Any:
 
 
 def _set_value(instance: Any, keys: list[str], value: Any) -> None:
-
     for key in keys[:-1]:
         instance = getattr(instance, key)
         if not is_dataclass(instance):
@@ -209,7 +208,7 @@ def _set_value(instance: Any, keys: list[str], value: Any) -> None:
         (
             not isinstance(value, Iterable)
             and not isinstance(old_value, Iterable)
-            and type(value) != type(old_value)
+            and type(value) is not type(old_value)
         )
         or (isinstance(value, Iterable) and not isinstance(old_value, Iterable))
         or (not isinstance(value, Iterable) and isinstance(old_value, Iterable))

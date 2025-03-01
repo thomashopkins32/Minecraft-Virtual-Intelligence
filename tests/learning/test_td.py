@@ -1,5 +1,4 @@
 import pytest
-from pytest_mock import mocker
 import torch
 
 from mvi.reasoning.critic import LinearCritic
