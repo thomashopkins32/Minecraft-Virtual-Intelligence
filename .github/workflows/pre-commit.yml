@@ -1,9 +1,13 @@
-name: Pre-commit
+name: pre-commit
 
-on: [push, pull_request]
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
 
 jobs:
-  lint:
+  pre-commit:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
