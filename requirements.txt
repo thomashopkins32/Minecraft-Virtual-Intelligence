@@ -1,8 +1,0 @@
-gymnasium
-numpy==1.26.4
-scipy
-torch
-torchvision
-tqdm
-PyYAML
-dacite

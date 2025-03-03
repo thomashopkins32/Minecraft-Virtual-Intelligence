@@ -1,5 +1,0 @@
-pytest
-pytest-mock
-types-PyYAML
-pre-commit
-ruff
