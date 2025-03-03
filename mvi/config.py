@@ -181,6 +181,24 @@ def parse_config(yaml_path: str) -> Config:
     """
     with open(yaml_path, "r") as fp:
         config_dict = yaml.load(fp, yaml.Loader)
+    
+    # Convert lists to tuples for fields that expect tuples
+    def convert_lists_to_tuples(data_class, data):
+        for field in data_class.__dataclass_fields__.values():
+            field_name = field.name
+            if field_name in data:
+                # Check if the field type is a tuple
+                if hasattr(field.type, "__origin__") and field.type.__origin__ is tuple:
+                    if isinstance(data[field_name], list):
+                        data[field_name] = tuple(data[field_name])
+                # Handle nested dataclasses
+                elif is_dataclass(field.type) and isinstance(data.get(field_name), dict):
+                    convert_lists_to_tuples(field.type, data[field_name])
+    
+    # Process the config dictionary before passing to dacite
+    convert_lists_to_tuples(Config, config_dict)
+    
+    # Now create the config object with the processed dictionary
     config = from_dict(data_class=Config, data=config_dict)
 
     return config

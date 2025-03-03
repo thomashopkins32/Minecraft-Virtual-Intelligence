@@ -73,9 +73,9 @@ def test_parse_config():
         config.agent.ppo.gae_discount_factor
         == config_dict["agent"]["ppo"]["gae_discount_factor"]
     )
-    assert config.engine.image_size == config_dict["engine"]["image_size"]
+    assert config.engine.image_size == tuple(config_dict["engine"]["image_size"])
     assert config.engine.max_steps == config_dict["engine"]["max_steps"]
-    assert config.agent.roi_shape == config_dict["agent"]["roi_shape"]
+    assert config.agent.roi_shape == tuple(config_dict["agent"]["roi_shape"])
     assert config.agent.max_buffer_size == config_dict["agent"]["max_buffer_size"]
     assert config.agent.ppo.actor_lr == config_dict["agent"]["ppo"]["actor_lr"]
     assert config.agent.ppo.critic_lr == config_dict["agent"]["ppo"]["critic_lr"]
