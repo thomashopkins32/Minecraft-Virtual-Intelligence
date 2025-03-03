@@ -55,7 +55,6 @@ class AgentV1:
         return roi_obs
 
     def act(self, obs: torch.Tensor, reward: float = 0.0) -> torch.Tensor:
-
         roi_obs = self._transform_observation(obs)
         with torch.no_grad():
             visual_features = self.vision(obs, roi_obs)

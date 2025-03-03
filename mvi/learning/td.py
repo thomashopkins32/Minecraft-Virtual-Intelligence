@@ -1,6 +1,5 @@
 import torch
 import torch.nn as nn
-import torch.optim as optim
 
 from mvi.config import TDConfig
 
@@ -27,7 +26,7 @@ class TemporalDifferenceActorCritic:
         self, action_logp: torch.Tensor, delta: torch.Tensor, current_time_step: int
     ) -> torch.Tensor:
         """Simple policy gradient loss"""
-        loss = -self.discount_factor**current_time_step * delta * action_logp
+        loss = -(self.discount_factor**current_time_step) * delta * action_logp
         return loss
 
     def _compute_critic_loss(self, delta: torch.Tensor) -> torch.Tensor:

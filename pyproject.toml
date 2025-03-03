@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools", "setuptools-scm"]
+requires = ["setuptools", "setuptools-scm[toml]>=8"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -17,6 +17,22 @@ classifiers = [
     "Operating System :: Unix",
     "Development Status :: 1 - Planning",
 ]
+dependencies = [
+    "PyYAML",
+    "dacite",
+    "gymnasium",
+    "numpy==1.26.4",
+    "scipy",
+    "torch",
+    "torchvision",
+    "tqdm",
+]
+
+[tool.setuptools]
+packages = ["mvi"]
+
+[project.license]
+file = "LICENSE"
 
 [project.urls]
 Homepage = "https://github.com/thomashopkins32/Minecraft-Virtual-Intelligence"
@@ -25,12 +41,11 @@ Issues = "https://github.com/thomashopkins32/Minecraft-Virtual-Intelligence/issu
 [project.scripts]
 mvi = "mvi.engine:run"
 
-[tool.setuptools.packages.find]
-where = ["."]
-include = ["mvi*"]
-exclude = ["tests"]
-namespaces = false
-
-[tool.setuptools.dynamic]
-readme = {file = ["README.md"]}
-dependencies = {file = ["requirements.txt"]}
+[project.optional-dependencies]
+dev = [
+    "pre-commit",
+    "pytest",
+    "pytest-mock",
+    "ruff",
+    "types-PyYAML",
+]

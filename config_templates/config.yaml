@@ -3,7 +3,7 @@
 
 # Engine settings
 engine:
-  image_size: !!python/tuple [160, 256]
+  image_size: [160, 256]
   max_steps: 10000
 
 # Agent settings
@@ -26,4 +26,4 @@ agent:
   td:
     discount_factor: 0.99
   max_buffer_size: 50
-  roi_shape: !!python/tuple [32, 32]
+  roi_shape: [32, 32]
