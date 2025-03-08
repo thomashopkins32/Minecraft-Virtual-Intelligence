@@ -1,5 +1,3 @@
-from typing import Union
-
 import torch
 from torchvision.transforms.functional import center_crop, crop  # type: ignore
 from gymnasium.spaces import MultiDiscrete
@@ -36,19 +34,19 @@ class AgentV1:
         self.config = config
 
         # region of interest initialization
-        self.roi_action: Union[torch.Tensor, None] = None
+        self.roi_action: torch.Tensor | None = None
         self.prev_visual_features: torch.Tensor = torch.zeros(
             (1, 64), dtype=torch.float
         )
 
     def _transform_observation(self, obs: torch.Tensor) -> torch.Tensor:
         if self.roi_action is None:
-            roi_obs = center_crop(obs, self.config.roi_shape)
+            roi_obs = center_crop(obs, list(self.config.roi_shape))
         else:
             roi_obs = crop(
                 obs,
-                self.roi_action[:, 0],
-                self.roi_action[:, 1],
+                int(self.roi_action[:, 0]),
+                int(self.roi_action[:, 1]),
                 self.config.roi_shape[0],
                 self.config.roi_shape[1],
             )

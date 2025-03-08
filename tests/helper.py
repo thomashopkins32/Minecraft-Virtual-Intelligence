@@ -1,9 +1,9 @@
 import os
+from typing import Any
 
 import numpy as np
 import gymnasium
 from gymnasium import spaces
-
 
 PROJECT_ROOT = os.path.abspath(os.path.join(__file__, "..", ".."))
 CONFIG_PATH = os.path.join(PROJECT_ROOT, "config_templates", "config.yaml")
@@ -16,19 +16,21 @@ class MockEnv(gymnasium.Env):
 
         self.observation_space = spaces.Dict(
             {
-                "rgb": spaces.Box(0, 255, shape=(160, 256), dtype=int),
+                "rgb": spaces.Box(0, 255, shape=(160, 256), dtype=np.uint8),
             }
         )
 
         self.action_space = ACTION_SPACE
 
-    def reset(self, seed=None, options=None):
-        super().reset(seed=seed)
+    def reset(
+        self, *, seed: int | None = None, options: dict[str, Any] | None = None
+    ) -> tuple[Any, dict[str, Any]]:
+        super().reset(seed=seed, options=options)
 
-        return {"rgb": np.zeros((3, 160, 256), dtype=int)}
+        return {"rgb": np.zeros((3, 160, 256), dtype=int)}, {}
 
-    def step(self, action):
-        return {"rgb": np.zeros((3, 160, 256), dtype=int)}, 0, False, None
+    def step(self, action) -> tuple[Any, float, bool, bool, dict[str, Any]]:
+        return {"rgb": np.zeros((3, 160, 256), dtype=int)}, 0, False, False, {}
 
     def render(self):
         pass

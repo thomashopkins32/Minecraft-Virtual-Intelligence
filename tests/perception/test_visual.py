@@ -29,7 +29,7 @@ def visual_perception_module():
 
 def test_visual_perception_forward(visual_perception_module):
     input_tensor = torch.randn((32, 3, 160, 256))
-    cropped_input = center_crop(input_tensor, (32, 32))
+    cropped_input = center_crop(input_tensor, [32, 32])
 
     output = visual_perception_module(input_tensor, cropped_input)
 
