@@ -44,6 +44,7 @@ mvi = "mvi.engine:run"
 [project.optional-dependencies]
 dev = [
     "pre-commit",
+    "pyright",
     "pytest",
     "pytest-mock",
     "ruff",
