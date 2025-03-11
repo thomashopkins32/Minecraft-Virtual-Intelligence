@@ -22,11 +22,6 @@ jobs:
       uses: ./.github/actions/install_requirements
       with:
         python-version: ${{ matrix.python-version }}
-        
-    - name: Install custom MineDojo
-      run: |
-        git clone --depth=1 --single-branch https://github.com/thomashopkins32/MineDojo.git
-        pip install ./MineDojo
 
     - name: Run pytest
       run: pytest ./tests

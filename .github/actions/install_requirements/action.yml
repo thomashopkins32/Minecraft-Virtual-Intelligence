@@ -26,6 +26,11 @@ runs:
       run: pip install ${{ inputs.pip-install }}
       shell: bash
 
+    - name: Install custom MineDojo
+      run: |
+        git clone --depth=1 --single-branch https://github.com/thomashopkins32/MineDojo.git
+        pip install ./MineDojo
+
     - name: Report what was installed
       run: pip freeze
       shell: bash
