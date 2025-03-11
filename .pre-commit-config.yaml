@@ -21,3 +21,10 @@ repos:
         entry: ruff format
         types: [python]
         require_serial: true
+    
+      - id: pyright
+        name: type check with pyright
+        language: system
+        entry: pyright
+        types: [python]
+        require_serial: true

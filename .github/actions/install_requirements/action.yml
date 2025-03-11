@@ -2,11 +2,11 @@ name: Install requirements
 description: Install a version of python then call pip install and report what was installed
 inputs:
   python-version:
-    description: Python version to install, default is from Dockerfile
+    description: Python version to install
     default: "3.12"
   pip-install:
     description: Parameters to pass to pip install
-    default: "$([ -f dev-requirements.txt ] && echo '-c dev-requirements.txt') -e .[dev]"
+    default: "-e .[dev]"
 
 runs:
   using: composite
@@ -24,6 +24,12 @@ runs:
 
     - name: Install packages
       run: pip install ${{ inputs.pip-install }}
+      shell: bash
+
+    - name: Install custom MineDojo
+      run: |
+        git clone --depth=1 --single-branch https://github.com/thomashopkins32/MineDojo.git
+        pip install ./MineDojo
       shell: bash
 
     - name: Report what was installed

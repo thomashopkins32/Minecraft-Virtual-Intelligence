@@ -13,7 +13,7 @@ jobs:
     strategy:
       matrix:
         host-os: [ubuntu-latest]
-        python-version: ["3.9", "3.10", "3.11", "3.12"]
+        python-version: ["3.10", "3.11", "3.12"]
     steps:
     - name: Checkout
       uses: actions/checkout@v4
@@ -22,11 +22,6 @@ jobs:
       uses: ./.github/actions/install_requirements
       with:
         python-version: ${{ matrix.python-version }}
-        
-    - name: Install custom MineDojo
-      run: |
-        git clone --depth=1 --single-branch https://github.com/thomashopkins32/MineDojo.git
-        pip install ./MineDojo
 
     - name: Run pytest
       run: pytest ./tests
