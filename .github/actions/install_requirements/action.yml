@@ -30,6 +30,7 @@ runs:
       run: |
         git clone --depth=1 --single-branch https://github.com/thomashopkins32/MineDojo.git
         pip install ./MineDojo
+      shell: bash
 
     - name: Report what was installed
       run: pip freeze
