@@ -10,7 +10,7 @@ authors = [
 ]
 description = "Research on virtual intelligence in Minecraft"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",
@@ -50,3 +50,8 @@ dev = [
     "ruff",
     "types-PyYAML",
 ]
+
+[tool.pyright]
+typeCheckingMode = "standard"
+reportMissingImports = true
+exclude = ["**/build"]
