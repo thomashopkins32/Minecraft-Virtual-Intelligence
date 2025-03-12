@@ -168,3 +168,7 @@ runs/
 # VS Code extensions
 .vscode/
 **/.vscode/
+
+# pixi environments
+.pixi
+*.egg-info

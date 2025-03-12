@@ -21,9 +21,54 @@ We are still early in the planning and development phase of the project. The fir
 
 ## Installation
 
-If you want to get started working with the project, we _highly_ recommend using a new Anaconda environment and installing from the [requirements](https://github.com/thomashopkins32/Minecraft-Virtual-Intelligence/blob/main/requirements.txt).
+First, clone the repository:
 
-The official MineDojo distribution as of writing this is no longer maintained and package versions aren't frozen which can lead to compatability errors. Because of this, we recommend installing the [forked version of MineDojo](https://github.com/thomashopkins32/MineDojo).
+```bash
+git clone https://github.com/thomashopkins32/Minecraft-Virtual-Intelligence.git
+cd Minecraft-Virtual-Intelligence
+```
+
+__RECOMMENDED__: We recommend using [Pixi](https://github.com/prefix-dev/pixi) to install the project by simply running:
+
+```bash
+pixi install
+```
+
+If you want to a conda environment you can install like so:
+
+```bash
+conda create -n mvi python=3.11
+conda activate mvi
+pip install .
+
+# Install custom MineDojo fork
+git clone https://github.com/thomashopkins32/MineDojo.git
+cd MineDojo
+pip install .
+cd ..
+```
+
+ The official MineDojo distribution as of writing this is no longer maintained and package versions aren't frozen which can lead to compatability errors. Because of this, we recommend installing the [forked version of MineDojo](https://github.com/thomashopkins32/MineDojo).
+
+## Running the project
+
+To run the project, you can use the `mvi` command.
+
+Either using Pixi:
+
+```bash
+pixi run mvi
+```
+
+Or if you installed with conda or venv:
+
+```bash
+mvi
+```
+
+This will start the project and you can use the `mvi` command to run the project starting from the `engine.run` function.
+
+To view a list of all the commands you can use, run `mvi --help`.
 
 ## Technologies
 
