@@ -76,6 +76,18 @@ MineDojo = { git = "https://github.com/thomashopkins32/MineDojo.git", rev = "mai
 [tool.pixi.environments]
 default = { solve-group = "default" }
 dev = { features = ["dev"], solve-group = "default" }
+py310 = { features = ["py310"] }
+py311 = { features = ["py311"] }
+py312 = { features = ["py312"] }
+
+[tool.pixi.feature.py310.dependencies]
+python = "3.10.*"
+
+[tool.pixi.feature.py311.dependencies]
+python = "3.11.*"
+
+[tool.pixi.feature.py312.dependencies]
+python = "3.12.*"
 
 [tool.pixi.tasks]
 mvi = "mvi"
