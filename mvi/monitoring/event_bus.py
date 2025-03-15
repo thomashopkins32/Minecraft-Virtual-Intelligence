@@ -1,6 +1,6 @@
 from typing import Callable
 
-from .schema.event import Event
+from .event import Event
 
 
 class EventBus:
