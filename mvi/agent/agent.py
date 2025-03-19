@@ -2,15 +2,16 @@ import torch
 from torchvision.transforms.functional import center_crop, crop  # type: ignore
 from gymnasium.spaces import MultiDiscrete
 
-from mvi.perception.visual import VisualPerception
-from mvi.affector.affector import LinearAffector
-from mvi.reasoning.critic import LinearCritic
-from mvi.reasoning.dynamics import InverseDynamics, ForwardDynamics
-from mvi.memory.trajectory import TrajectoryBuffer
-from mvi.learning.icm import ICM
-from mvi.learning.ppo import PPO
-from mvi.config import AgentConfig
-from mvi.utils import sample_action
+from ..perception.visual import VisualPerception
+from ..affector.affector import LinearAffector
+from ..reasoning.critic import LinearCritic
+from ..reasoning.dynamics import InverseDynamics, ForwardDynamics
+from ..memory.trajectory import TrajectoryBuffer
+from ..learning.icm import ICM
+from ..learning.ppo import PPO
+from ..config import AgentConfig
+from ..utils import sample_action
+from ..monitoring.event_bus import EventBus
 
 
 class AgentV1:
@@ -22,7 +23,7 @@ class AgentV1:
     - How fast is the visual perception module? Does it need to be faster?
     """
 
-    def __init__(self, config: AgentConfig, action_space: MultiDiscrete):
+    def __init__(self, config: AgentConfig, action_space: MultiDiscrete) -> None:
         self.vision = VisualPerception(out_channels=32)
         self.affector = LinearAffector(32 + 32, action_space)
         self.critic = LinearCritic(32 + 32)

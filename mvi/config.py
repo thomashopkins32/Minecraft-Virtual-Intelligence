@@ -112,6 +112,13 @@ class AgentConfig:
 
 
 @dataclass
+class MonitoringConfig:
+    enabled: bool = True
+    monitoring_level: str = "INFO"
+    event_types_to_log: list[str] = ["EnvReset", "EnvStep"]  # Can be more selective
+
+
+@dataclass
 class Config:
     """
     Configuration definitions for the full program
@@ -122,11 +129,13 @@ class Config:
         Configuration for the engine
     ppo : PPOConfig
         Configuration for the PPO learning algorithm
+    logging : LoggingConfig
+        Configuration for logging
     """
 
     engine: EngineConfig
     agent: AgentConfig
-
+    monitoring: MonitoringConfig
 
 def get_config() -> Config:
     arguments = parse_arguments()
@@ -136,6 +145,7 @@ def get_config() -> Config:
         config = Config(
             engine=EngineConfig(),
             agent=AgentConfig(ppo=PPOConfig(), icm=ICMConfig(), td=TDConfig()),
+            monitoring=MonitoringConfig(),
         )
     if arguments.key_value_pairs is not None:
         update_config(config, arguments.key_value_pairs)
