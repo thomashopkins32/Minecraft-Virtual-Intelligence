@@ -14,6 +14,7 @@ class Event:
     timestamp: datetime
         The time that the event occurred.
     """
+
     timestamp: datetime
 
 
@@ -27,6 +28,7 @@ class EnvStep(Event):
     reward: float
         The reward given by the environment.
     """
+
     observation: torch.Tensor
     action: torch.Tensor
     next_observation: torch.Tensor
@@ -38,6 +40,7 @@ class EnvReset(Event):
     """
     After the environment has been reset.
     """
+
     observation: torch.Tensor
 
 
@@ -46,6 +49,7 @@ class ModuleForwardStart(Event):
     """
     The start of a `nn.Module.forward` call.
     """
+
     name: str
     inputs: torch.Tensor
 
@@ -55,6 +59,6 @@ class ModuleForwardEnd(Event):
     """
     The end of a `nn.Module.forward` call.
     """
+
     name: str
     outputs: torch.Tensor
-

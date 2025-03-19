@@ -11,7 +11,6 @@ from ..learning.icm import ICM
 from ..learning.ppo import PPO
 from ..config import AgentConfig
 from ..utils import sample_action
-from ..monitoring.event_bus import EventBus
 
 
 class AgentV1:

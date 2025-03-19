@@ -32,7 +32,15 @@ def run() -> None:
         next_obs, reward, _, _ = env.step(action)
         total_return += reward
         obs = torch.tensor(next_obs["rgb"].copy(), dtype=torch.float).unsqueeze(0)
-        event_bus.publish(EnvStep(timestamp=datetime.now(), observation=obs, action=action, reward=reward, next_observation=next_obs))
+        event_bus.publish(
+            EnvStep(
+                timestamp=datetime.now(),
+                observation=obs,
+                action=action,
+                reward=reward,
+                next_observation=next_obs,
+            )
+        )
 
 
 @event_bus.subscribe(Event)

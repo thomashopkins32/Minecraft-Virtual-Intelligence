@@ -137,6 +137,7 @@ class Config:
     agent: AgentConfig
     monitoring: MonitoringConfig
 
+
 def get_config() -> Config:
     arguments = parse_arguments()
     if arguments.file is not None:

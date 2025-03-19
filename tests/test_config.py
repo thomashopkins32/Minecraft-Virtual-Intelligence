@@ -14,6 +14,7 @@ from mvi.config import (
     EngineConfig,
     AgentConfig,
     Config,
+    MonitoringConfig,
 )
 from tests.helper import ACTION_SPACE, CONFIG_PATH
 
@@ -95,7 +96,12 @@ def test_parse_config():
 def test_update_config():
     config = Config(
         engine=EngineConfig(),
-        agent=AgentConfig(ppo=PPOConfig(), icm=ICMConfig(), td=TDConfig()),
+        agent=AgentConfig(
+            ppo=PPOConfig(),
+            icm=ICMConfig(),
+            td=TDConfig(),
+        ),
+        monitoring=MonitoringConfig(),
     )
 
     # Other - empty list
