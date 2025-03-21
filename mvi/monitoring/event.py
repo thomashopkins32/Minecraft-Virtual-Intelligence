@@ -19,6 +19,24 @@ class Event:
 
 
 @dataclass
+class Start(Event):
+    """
+    The start of the simulation.
+    """
+
+    pass
+
+
+@dataclass
+class Stop(Event):
+    """
+    The end of the simulation.
+    """
+
+    pass
+
+
+@dataclass
 class EnvStep(Event):
     """
     After a single action has been taken in the environment.

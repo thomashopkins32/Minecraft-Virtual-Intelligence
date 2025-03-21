@@ -12,6 +12,22 @@ class EventBus:
         self._enabled = True  # Global toggle
 
     def publish(self, event: Event) -> None:
+        """
+        Publish an event to all subscribed listeners.
+
+        This method will notify all listeners that are subscribed to the event's type.
+        If the event bus is disabled or if specific listeners are disabled,
+        those listeners will not receive the event.
+
+        Parameters
+        ----------
+        event : Event
+            The event to publish to subscribed listeners
+
+        Returns
+        -------
+        None
+        """
         if not self._enabled:
             return
 
@@ -21,13 +37,25 @@ class EventBus:
                 listener(event)
 
     def subscribe(
-        self, event_type: Type[T]
-    ) -> Callable[[Callable[[T], None]], Callable[[T], None]]:
-        def decorator(callback: Callable[[T], None]) -> Callable[[T], None]:
-            self._listeners.setdefault(event_type, []).append(callback)
-            return callback
+        self, event_type: Type[T], callback: Callable[[T], None]
+    ) -> Callable[[T], None]:
+        """
+        Subscribe a callback function to a specific event type.
 
-        return decorator
+        Parameters
+        ----------
+        event_type : Type[T]
+            The type of event to subscribe to
+        callback : Callable[[T], None]
+            The function to call when an event of this type is published
+
+        Returns
+        -------
+        Callable[[T], None]
+            The callback function (for chaining)
+        """
+        self._listeners.setdefault(event_type, []).append(callback)
+        return callback
 
     def disable(self) -> None:
         """Disable all event publishing"""
@@ -47,4 +75,20 @@ class EventBus:
             self._disabled_listeners.remove(listener)
 
 
-event_bus = EventBus()
+# Global instance for singleton pattern
+_global_event_bus: EventBus | None = None
+
+
+def get_event_bus() -> EventBus:
+    """
+    Get the global event bus instance. Creates one if it doesn't exist.
+
+    Returns
+    -------
+    EventBus
+        The global event bus instance
+    """
+    global _global_event_bus
+    if _global_event_bus is None:
+        _global_event_bus = EventBus()
+    return _global_event_bus

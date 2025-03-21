@@ -7,8 +7,8 @@ from gymnasium.spaces import MultiDiscrete
 
 from .agent.agent import AgentV1
 from .config import get_config
-from .monitoring.event_bus import event_bus
-from .monitoring.event import Event, EnvReset, EnvStep
+from .monitoring.event_bus import get_event_bus
+from .monitoring.event import EnvReset, EnvStep
 
 
 def run() -> None:
@@ -19,6 +19,13 @@ def run() -> None:
     """
     config = get_config()
     engine_config = config.engine
+    event_bus = get_event_bus()
+
+    if config.monitoring.enabled:
+        event_bus.enable()
+    else:
+        event_bus.disable()
+
     env = minedojo.make(task_id="open-ended", image_size=engine_config.image_size)
     action_space = cast(MultiDiscrete, env.action_space)
     agent = AgentV1(config.agent, action_space)
@@ -41,11 +48,6 @@ def run() -> None:
                 next_observation=next_obs,
             )
         )
-
-
-@event_bus.subscribe(Event)
-def log_timestamp(event: Event) -> None:
-    print(f"{type(event)}: {event.timestamp}")
 
 
 if __name__ == "__main__":
