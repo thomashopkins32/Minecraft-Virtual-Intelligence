@@ -1,3 +1,5 @@
+from datetime import datetime
+
 import torch
 from torchvision.transforms.functional import center_crop, crop  # type: ignore
 from gymnasium.spaces import MultiDiscrete
@@ -10,7 +12,9 @@ from ..memory.trajectory import TrajectoryBuffer
 from ..learning.icm import ICM
 from ..learning.ppo import PPO
 from ..config import AgentConfig
+from ..monitoring.event import Action
 from ..utils import sample_action
+from ..monitoring.event_bus import get_event_bus
 
 
 class AgentV1:
@@ -38,6 +42,7 @@ class AgentV1:
         self.prev_visual_features: torch.Tensor = torch.zeros(
             (1, 64), dtype=torch.float
         )
+        self.event_bus = get_event_bus()
 
     def _transform_observation(self, obs: torch.Tensor) -> torch.Tensor:
         if self.roi_action is None:
@@ -59,7 +64,6 @@ class AgentV1:
             actions = self.affector(visual_features)
             value = self.critic(visual_features)
         action, logp_action = sample_action(actions)
-        self.roi_action = action[:, -2:].round().long()
 
         # Get the intrinsic reward associated with the previous observation
         with torch.no_grad():
@@ -77,5 +81,7 @@ class AgentV1:
             self.icm.update(self.memory)
 
         self.prev_visual_features = visual_features
-
-        return action[:, :-2].long()
+        self.roi_action = action[:, -2:].round().long()
+        env_action = action[:, :-2].long()
+        self.event_bus.publish(Action(timestamp=datetime.now(), visual_features=visual_features, action_distribution=actions, action=action, logp_action=logp_action, value=value, region_of_interest=roi_obs, intrinsic_reward=intrinsic_reward))
+        return env_action

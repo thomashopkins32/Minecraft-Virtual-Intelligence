@@ -23,8 +23,7 @@ class Start(Event):
     """
     The start of the simulation.
     """
-
-    pass
+    ...
 
 
 @dataclass
@@ -33,7 +32,7 @@ class Stop(Event):
     The end of the simulation.
     """
 
-    pass
+    total_return: float
 
 
 @dataclass
@@ -60,6 +59,21 @@ class EnvReset(Event):
     """
 
     observation: torch.Tensor
+
+
+@dataclass
+class Action(Event):
+    """
+    An action taken by the agent.
+    """
+
+    visual_features: torch.Tensor
+    action_distribution: torch.Tensor
+    action: torch.Tensor
+    logp_action: torch.Tensor
+    value: torch.Tensor
+    region_of_interest: torch.Tensor
+    intrinsic_reward: float
 
 
 @dataclass

@@ -8,8 +8,7 @@ from gymnasium.spaces import MultiDiscrete
 from .agent.agent import AgentV1
 from .config import get_config
 from .monitoring.event_bus import get_event_bus
-from .monitoring.event import EnvReset, EnvStep
-
+from .monitoring.event import Start, Stop, EnvReset, EnvStep
 
 def run() -> None:
     """
@@ -26,6 +25,8 @@ def run() -> None:
     else:
         event_bus.disable()
 
+    event_bus.publish(Start(timestamp=datetime.now()))
+
     env = minedojo.make(task_id="open-ended", image_size=engine_config.image_size)
     action_space = cast(MultiDiscrete, env.action_space)
     agent = AgentV1(config.agent, action_space)
@@ -34,11 +35,10 @@ def run() -> None:
     event_bus.publish(EnvReset(timestamp=datetime.now(), observation=obs))
     obs = torch.tensor(obs, dtype=torch.float).unsqueeze(0)
     total_return = 0.0
-    for s in range(engine_config.max_steps):
+    for _ in range(engine_config.max_steps):
         action = agent.act(obs).squeeze(0)
         next_obs, reward, _, _ = env.step(action)
-        total_return += reward
-        obs = torch.tensor(next_obs["rgb"].copy(), dtype=torch.float).unsqueeze(0)
+        next_obs = torch.tensor(next_obs["rgb"].copy(), dtype=torch.float).unsqueeze(0)
         event_bus.publish(
             EnvStep(
                 timestamp=datetime.now(),
@@ -48,6 +48,10 @@ def run() -> None:
                 next_observation=next_obs,
             )
         )
+        total_return += reward
+        obs = next_obs
+
+    event_bus.publish(Stop(timestamp=datetime.now(), total_return=total_return))
 
 
 if __name__ == "__main__":
