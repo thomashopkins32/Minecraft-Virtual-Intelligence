@@ -83,5 +83,16 @@ class AgentV1:
         self.prev_visual_features = visual_features
         self.roi_action = action[:, -2:].round().long()
         env_action = action[:, :-2].long()
-        self.event_bus.publish(Action(timestamp=datetime.now(), visual_features=visual_features, action_distribution=actions, action=action, logp_action=logp_action, value=value, region_of_interest=roi_obs, intrinsic_reward=intrinsic_reward))
+        self.event_bus.publish(
+            Action(
+                timestamp=datetime.now(),
+                visual_features=visual_features,
+                action_distribution=actions,
+                action=action,
+                logp_action=logp_action,
+                value=value,
+                region_of_interest=roi_obs,
+                intrinsic_reward=intrinsic_reward,
+            )
+        )
         return env_action

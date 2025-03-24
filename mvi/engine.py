@@ -10,6 +10,7 @@ from .config import get_config
 from .monitoring.event_bus import get_event_bus
 from .monitoring.event import Start, Stop, EnvReset, EnvStep
 
+
 def run() -> None:
     """
     Entry-point for the project.

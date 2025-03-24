@@ -23,6 +23,7 @@ class Start(Event):
     """
     The start of the simulation.
     """
+
     ...
 
 
