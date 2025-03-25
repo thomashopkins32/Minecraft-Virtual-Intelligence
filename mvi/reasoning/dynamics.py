@@ -3,7 +3,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 from gymnasium.spaces import MultiDiscrete
 
-from mvi.affector.affector import LinearAffector
+from ..affector.affector import LinearAffector
+from ..utils import add_forward_hooks
 
 
 class InverseDynamics(nn.Module):
@@ -11,6 +12,9 @@ class InverseDynamics(nn.Module):
         super().__init__()
         # Multiply by 2 since we are concatenating the current obs and the next obs
         self.affector = LinearAffector(embed_dim * 2, action_space)
+
+        # Monitoring
+        self.start_monitoring()
 
     def forward(
         self, x1: torch.Tensor, x2: torch.Tensor
@@ -51,12 +55,22 @@ class InverseDynamics(nn.Module):
         x = self.affector(x)
         return x  # type: ignore
 
+    def stop_monitoring(self):
+        for hook in self.hooks:
+            hook.remove()
+
+    def start_monitoring(self):
+        self.hooks = add_forward_hooks(self, "InverseDynamics")
+
 
 class ForwardDynamics(nn.Module):
     def __init__(self, embed_dim: int, action_dim: int):
         super().__init__()
         self.l1 = nn.Linear(embed_dim + action_dim, 512)
         self.l2 = nn.Linear(512, embed_dim)
+
+        # Monitoring
+        self.start_monitoring()
 
     def forward(self, x: torch.Tensor, a: torch.Tensor) -> torch.Tensor:
         """
@@ -82,3 +96,10 @@ class ForwardDynamics(nn.Module):
         x = F.relu(self.l1(x))
         x = self.l2(x)
         return x
+
+    def stop_monitoring(self):
+        for hook in self.hooks:
+            hook.remove()
+
+    def start_monitoring(self):
+        self.hooks = add_forward_hooks(self, "ForwardDynamics")

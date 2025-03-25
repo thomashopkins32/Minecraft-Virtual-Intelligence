@@ -2,6 +2,8 @@ import torch
 import torch.nn as nn
 from gymnasium.spaces import MultiDiscrete
 
+from ..utils import add_forward_hooks
+
 
 class LinearAffector(nn.Module):
     """
@@ -51,6 +53,9 @@ class LinearAffector(nn.Module):
         self.softplus = nn.Softplus()
         self.action_space = action_space
 
+        # Monitoring
+        self.start_monitoring()
+
     def forward(
         self, x: torch.Tensor
     ) -> tuple[
@@ -88,3 +93,10 @@ class LinearAffector(nn.Module):
             roi_means,
             roi_stds,
         )
+
+    def stop_monitoring(self):
+        for hook in self.hooks:
+            hook.remove()
+
+    def start_monitoring(self):
+        self.hooks = add_forward_hooks(self, "Affector")

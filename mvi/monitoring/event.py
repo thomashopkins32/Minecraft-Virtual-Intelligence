@@ -84,7 +84,7 @@ class ModuleForwardStart(Event):
     """
 
     name: str
-    inputs: torch.Tensor
+    inputs: dict[str, torch.Tensor]
 
 
 @dataclass
@@ -94,4 +94,4 @@ class ModuleForwardEnd(Event):
     """
 
     name: str
-    outputs: torch.Tensor
+    outputs: dict[str, torch.Tensor]

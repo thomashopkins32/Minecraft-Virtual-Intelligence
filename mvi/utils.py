@@ -1,10 +1,15 @@
-from typing import Tuple
+from datetime import datetime
 import logging
 from math import floor
 
 import numpy as np
 import scipy  # type: ignore
 import torch
+import torch.nn as nn
+from torch.utils.hooks import RemovableHandle
+
+from .monitoring.event import ModuleForwardEnd, ModuleForwardStart
+from .monitoring.event_bus import get_event_bus
 
 
 def compute_output_shape(input_shape, kernel_size, stride):
@@ -96,13 +101,13 @@ def discount_cumsum(x: np.ndarray, discount: float) -> np.ndarray:
     return scipy.signal.lfilter([1], [1, float(-discount)], x[::-1], axis=0)[::-1]
 
 
-def statistics(x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+def statistics(x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
     return torch.mean(x), torch.std(x)
 
 
 def sample_multinomial(
     dist: torch.Tensor, sample_dtype=torch.long
-) -> Tuple[torch.Tensor, torch.Tensor]:
+) -> tuple[torch.Tensor, torch.Tensor]:
     """Returns a sample and its log probability for a multinomial distribution"""
     sample = torch.multinomial(dist, 1)  # Shape: (batch_size, 1)
     batch_indices = torch.arange(dist.size(0)).unsqueeze(1)
@@ -111,7 +116,7 @@ def sample_multinomial(
 
 def sample_guassian(
     mean: torch.Tensor, std: torch.Tensor
-) -> Tuple[torch.Tensor, torch.Tensor]:
+) -> tuple[torch.Tensor, torch.Tensor]:
     """Returns a sample and its log probability for a Guassian distribution"""
     dist = torch.distributions.Normal(mean, std)
     sample = dist.rsample()  # Use rsample() to maintain gradients
@@ -119,7 +124,7 @@ def sample_guassian(
 
 
 def sample_action(
-    action_dists: Tuple[
+    action_dists: tuple[
         torch.Tensor,
         torch.Tensor,
         torch.Tensor,
@@ -131,7 +136,7 @@ def sample_action(
         torch.Tensor,
         torch.Tensor,
     ],
-) -> Tuple[torch.Tensor, torch.Tensor]:
+) -> tuple[torch.Tensor, torch.Tensor]:
     """
     Samples actions from the various distributions and combines them into an action tensor.
     Outputs the action tensor and a logp tensor showing the log probability of taking that action.
@@ -191,7 +196,7 @@ def sample_action(
 
 
 def joint_logp_action(
-    action_dists: Tuple[
+    action_dists: tuple[
         torch.Tensor,
         torch.Tensor,
         torch.Tensor,
@@ -282,3 +287,96 @@ def joint_logp_action(
     joint_logp = joint_logp + y_roi_dist.log_prob(actions_taken[:, 9])
 
     return joint_logp
+
+
+def add_forward_hooks(module: nn.Module, prefix: str = "") -> list[RemovableHandle]:
+    """
+    Add forward hooks to all modules in the model to log their inputs and outputs.
+
+    Parameters
+    ----------
+    module : nn.Module
+        The module to add hooks to, typically the full model
+    prefix : str
+        A prefix to add to module names for better organization
+
+    Returns
+    -------
+    List[torch.utils.hooks.RemovableHandle]
+        List of hook handles that can be used to remove the hooks if needed
+    """
+    event_bus = get_event_bus()
+    handles = []
+
+    def _pre_hook(module_name):
+        def hook(module, inputs):
+            # Convert inputs to a standardized format for logging
+            formatted_inputs = _format_tensors_for_logging(inputs)
+            # Publish event
+            event_bus.publish(
+                ModuleForwardStart(
+                    name=module_name, inputs=formatted_inputs, timestamp=datetime.now()
+                )
+            )
+            return None
+
+        return hook
+
+    def _post_hook(module_name):
+        def hook(module, inputs, outputs):
+            # Convert outputs to a standardized format for logging
+            formatted_outputs = _format_tensors_for_logging(outputs)
+            # Publish event
+            event_bus.publish(
+                ModuleForwardEnd(
+                    name=module_name,
+                    outputs=formatted_outputs,
+                    timestamp=datetime.now(),
+                )
+            )
+            return None
+
+        return hook
+
+    # Add hooks recursively to all modules
+    for name, submodule in module.named_modules():
+        if name == "":  # Skip the root module
+            continue
+
+        full_name = f"{prefix}.{name}" if prefix else name
+        # Register pre-forward hook
+        handles.append(submodule.register_forward_pre_hook(_pre_hook(full_name)))
+        # Register post-forward hook
+        handles.append(submodule.register_forward_hook(_post_hook(full_name)))
+
+    return handles
+
+
+def _format_tensors_for_logging(
+    tensors: torch.Tensor | tuple[torch.Tensor, ...] | list[torch.Tensor],
+) -> dict[str, torch.Tensor]:
+    """
+    Format tensors for logging to make them compatible with the event system and tensorboard.
+
+    Parameters
+    ----------
+    tensors : torch.Tensor | tuple[torch.Tensor, ...] | list[torch.Tensor]
+        Input tensors from forward calls, which can be a single tensor or nested structures
+
+    Returns
+    -------
+    Dict[str, torch.Tensor]
+        Formatted data suitable for logging
+    """
+    result = {}
+
+    # Handle different input types
+    if isinstance(tensors, torch.Tensor):
+        return {"tensor": tensors.detach()}
+
+    # Handle tuple/list of tensors (common for forward inputs)
+    if isinstance(tensors, (tuple, list)):
+        for i, tensor in enumerate(tensors):
+            result[f"tensor_{i}"] = tensor.detach()
+
+    return result
