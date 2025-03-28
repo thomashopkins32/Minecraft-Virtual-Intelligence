@@ -1,10 +1,21 @@
 from collections.abc import Iterable
-from dataclasses import dataclass, is_dataclass
+from dataclasses import dataclass, is_dataclass, field
 import argparse
-from typing import Any
+from typing import Any, Literal
 
 import yaml
 from dacite import from_dict
+
+# Define module names that can be monitored
+ModuleName = Literal[
+    "Affector",
+    "Critic",
+    "VisualPerception",
+    "FoveatedPerception",
+    "PeripheralPerception",
+    "ForwardDynamics",
+    "InverseDynamics",
+]
 
 
 @dataclass
@@ -104,18 +115,114 @@ class AgentConfig:
         Height and width of region of interest for visual perception
     """
 
-    ppo: PPOConfig
-    icm: ICMConfig
-    td: TDConfig
+    ppo: PPOConfig = field(default_factory=PPOConfig)
+    icm: ICMConfig = field(default_factory=ICMConfig)
+    td: TDConfig = field(default_factory=TDConfig)
     max_buffer_size: int = 50
     roi_shape: tuple[int, int] = (32, 32)
 
 
 @dataclass
-class MonitoringConfig:
+class TensorboardConfig:
+    """
+    Configuration for TensorBoard logging
+
+    Attributes
+    ----------
+    enabled : bool, optional
+        Whether to enable TensorBoard logging
+    log_dir : str, optional
+        Directory to save TensorBoard logs
+    flush_secs : int, optional
+        How often to flush data to disk (in seconds)
+    max_images_per_grid : int, optional
+        Maximum number of images to include in visualization grids
+    histogram_bins : int, optional
+        Number of bins for histogram visualizations
+    scalar_smoothing : float, optional
+        Smoothing factor for scalar plots (0.0-1.0)
+    """
+
     enabled: bool = True
-    monitoring_level: str = "INFO"
-    event_types_to_log: list[str] = ["EnvReset", "EnvStep"]  # Can be more selective
+    log_dir: str = "runs"
+    flush_secs: int = 10
+    max_images_per_grid: int = 16
+    histogram_bins: int = 30
+    scalar_smoothing: float = 0.6
+
+
+@dataclass
+class EventLoggingConfig:
+    """
+    Configuration for event logging
+
+    Attributes
+    ----------
+    log_env_steps : bool, optional
+        Whether to log environment step events
+    log_env_resets : bool, optional
+        Whether to log environment reset events
+    log_actions : bool, optional
+        Whether to log agent action events
+    log_module_forward : bool, optional
+        Whether to log module forward pass events
+    module_step_frequency : int, optional
+        Log module forward events every N steps (1 = every step)
+    modules_to_monitor : list[ModuleName] | None, optional
+        List of specific module names to monitor (empty = all modules)
+    observation_format : str, optional
+        Format for observation logging ('full', 'downsampled', or 'none')
+    """
+
+    log_env_steps: bool = True
+    log_env_resets: bool = True
+    log_actions: bool = True
+    log_module_forward: bool = True
+    module_step_frequency: int = 10
+    modules_to_monitor: list[ModuleName] | None = field(
+        default_factory=lambda: [
+            "Affector",
+            "Critic",
+            "VisualPerception",
+            "FoveatedPerception",
+            "PeripheralPerception",
+            "ForwardDynamics",
+            "InverseDynamics",
+        ]
+    )
+    observation_format: str = "downsampled"
+
+
+@dataclass
+class MonitoringConfig:
+    """
+    Configuration for the monitoring system
+
+    Attributes
+    ----------
+    enabled : bool, optional
+        Master switch to enable/disable all monitoring
+    tensorboard : TensorboardConfig, optional
+        Configuration for TensorBoard logging
+    events : EventLoggingConfig, optional
+        Configuration for event logging
+    record_video : bool, optional
+        Whether to record video of the agent's performance
+    video_fps : int, optional
+        Frames per second for recorded videos
+    save_checkpoints : bool, optional
+        Whether to save model checkpoints during training
+    checkpoint_frequency : int, optional
+        Save checkpoints every N steps
+    """
+
+    enabled: bool = True
+    tensorboard: TensorboardConfig = field(default_factory=TensorboardConfig)
+    events: EventLoggingConfig = field(default_factory=EventLoggingConfig)
+    record_video: bool = False
+    video_fps: int = 30
+    save_checkpoints: bool = True
+    checkpoint_frequency: int = 1000
 
 
 @dataclass
@@ -133,9 +240,9 @@ class Config:
         Configuration for logging
     """
 
-    engine: EngineConfig
-    agent: AgentConfig
-    monitoring: MonitoringConfig
+    engine: EngineConfig = field(default_factory=EngineConfig)
+    agent: AgentConfig = field(default_factory=AgentConfig)
+    monitoring: MonitoringConfig = field(default_factory=MonitoringConfig)
 
 
 def get_config() -> Config:
@@ -143,11 +250,7 @@ def get_config() -> Config:
     if arguments.file is not None:
         config = parse_config(arguments.file)
     else:
-        config = Config(
-            engine=EngineConfig(),
-            agent=AgentConfig(ppo=PPOConfig(), icm=ICMConfig(), td=TDConfig()),
-            monitoring=MonitoringConfig(),
-        )
+        config = Config()
     if arguments.key_value_pairs is not None:
         update_config(config, arguments.key_value_pairs)
     return config
@@ -195,18 +298,21 @@ def parse_config(yaml_path: str) -> Config:
 
     # Convert lists to tuples for fields that expect tuples
     def convert_lists_to_tuples(data_class, data):
-        for field in data_class.__dataclass_fields__.values():
-            field_name = field.name
+        for dc_field in data_class.__dataclass_fields__.values():
+            field_name = dc_field.name
             if field_name in data:
                 # Check if the field type is a tuple
-                if hasattr(field.type, "__origin__") and field.type.__origin__ is tuple:
+                if (
+                    hasattr(dc_field.type, "__origin__")
+                    and dc_field.type.__origin__ is tuple
+                ):
                     if isinstance(data[field_name], list):
                         data[field_name] = tuple(data[field_name])
                 # Handle nested dataclasses
-                elif is_dataclass(field.type) and isinstance(
+                elif is_dataclass(dc_field.type) and isinstance(
                     data.get(field_name), dict
                 ):
-                    convert_lists_to_tuples(field.type, data[field_name])
+                    convert_lists_to_tuples(dc_field.type, data[field_name])
 
     # Process the config dictionary before passing to dacite
     convert_lists_to_tuples(Config, config_dict)

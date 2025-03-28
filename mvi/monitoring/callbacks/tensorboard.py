@@ -10,11 +10,13 @@ from ..event import (
     ModuleForwardStart,
     ModuleForwardEnd,
 )
+from ...config import TensorboardConfig
 
 
 class TensorboardWriter:
-    def __init__(self) -> None:
-        self.writer = SummaryWriter()
+    def __init__(self, config: TensorboardConfig) -> None:
+        # TODO: Add the rest of the configuration
+        self.writer = SummaryWriter(log_dir=config.log_dir)
         self.step_counter: dict[str, int] = {}
 
     def __call__(self, event: Event) -> None:
