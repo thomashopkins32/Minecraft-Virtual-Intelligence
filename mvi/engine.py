@@ -9,6 +9,19 @@ from .agent.agent import AgentV1
 from .config import get_config
 from .monitoring.event_bus import get_event_bus
 from .monitoring.event import Start, Stop, EnvReset, EnvStep
+from .utils import setup_tensorboard
+from .config import MonitoringConfig
+
+
+def setup_monitoring(config: MonitoringConfig) -> None:
+    event_bus = get_event_bus()
+    if config.enabled:
+        event_bus.enable()
+    else:
+        event_bus.disable()
+
+    if config.tensorboard:
+        setup_tensorboard(config.tensorboard)
 
 
 def run() -> None:
@@ -20,11 +33,8 @@ def run() -> None:
     config = get_config()
     engine_config = config.engine
     event_bus = get_event_bus()
-
-    if config.monitoring.enabled:
-        event_bus.enable()
-    else:
-        event_bus.disable()
+    monitoring_config = config.monitoring
+    setup_monitoring(monitoring_config)
 
     event_bus.publish(Start(timestamp=datetime.now()))
 
@@ -33,22 +43,24 @@ def run() -> None:
     agent = AgentV1(config.agent, action_space)
 
     obs = env.reset()["rgb"].copy()  # type: ignore[no-untyped-call]
-    event_bus.publish(EnvReset(timestamp=datetime.now(), observation=obs))
+    if monitoring_config.events.log_env_resets:
+        event_bus.publish(EnvReset(timestamp=datetime.now(), observation=obs))
     obs = torch.tensor(obs, dtype=torch.float).unsqueeze(0)
     total_return = 0.0
     for _ in range(engine_config.max_steps):
         action = agent.act(obs).squeeze(0)
         next_obs, reward, _, _ = env.step(action)
         next_obs = torch.tensor(next_obs["rgb"].copy(), dtype=torch.float).unsqueeze(0)
-        event_bus.publish(
-            EnvStep(
-                timestamp=datetime.now(),
-                observation=obs,
-                action=action,
-                reward=reward,
-                next_observation=next_obs,
+        if monitoring_config.events.log_env_steps:
+            event_bus.publish(
+                EnvStep(
+                    timestamp=datetime.now(),
+                    observation=obs,
+                    action=action,
+                    reward=reward,
+                    next_observation=next_obs,
+                )
             )
-        )
         total_return += reward
         obs = next_obs
 

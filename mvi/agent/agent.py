@@ -26,7 +26,11 @@ class AgentV1:
     - How fast is the visual perception module? Does it need to be faster?
     """
 
-    def __init__(self, config: AgentConfig, action_space: MultiDiscrete) -> None:
+    def __init__(
+        self,
+        config: AgentConfig,
+        action_space: MultiDiscrete,
+    ) -> None:
         self.vision = VisualPerception(out_channels=32)
         self.affector = LinearAffector(32 + 32, action_space)
         self.critic = LinearCritic(32 + 32)
@@ -36,6 +40,7 @@ class AgentV1:
         self.ppo = PPO(self.affector, self.critic, config.ppo)
         self.icm = ICM(self.forward_dynamics, self.inverse_dynamics, config.icm)
         self.config = config
+        self.monitor_actions = False
 
         # region of interest initialization
         self.roi_action: torch.Tensor | None = None
@@ -56,6 +61,26 @@ class AgentV1:
                 self.config.roi_shape[1],
             )
         return roi_obs
+
+    def start_monitoring(
+        self, *, log_module_forward: bool = True, log_actions: bool = True
+    ) -> None:
+        if log_module_forward:
+            self.vision.start_monitoring()
+            self.affector.start_monitoring()
+            self.critic.start_monitoring()
+            self.inverse_dynamics.start_monitoring()
+            self.forward_dynamics.start_monitoring()
+        if log_actions:
+            self.monitor_actions = True
+
+    def stop_monitoring(self) -> None:
+        self.vision.stop_monitoring()
+        self.affector.stop_monitoring()
+        self.critic.stop_monitoring()
+        self.inverse_dynamics.stop_monitoring()
+        self.forward_dynamics.stop_monitoring()
+        self.monitor_actions = False
 
     def act(self, obs: torch.Tensor, reward: float = 0.0) -> torch.Tensor:
         roi_obs = self._transform_observation(obs)
@@ -83,16 +108,17 @@ class AgentV1:
         self.prev_visual_features = visual_features
         self.roi_action = action[:, -2:].round().long()
         env_action = action[:, :-2].long()
-        self.event_bus.publish(
-            Action(
-                timestamp=datetime.now(),
-                visual_features=visual_features,
-                action_distribution=actions,
-                action=action,
-                logp_action=logp_action,
-                value=value,
-                region_of_interest=roi_obs,
-                intrinsic_reward=intrinsic_reward,
+        if self.monitor_actions:
+            self.event_bus.publish(
+                Action(
+                    timestamp=datetime.now(),
+                    visual_features=visual_features,
+                    action_distribution=actions,
+                    action=action,
+                    logp_action=logp_action,
+                    value=value,
+                    region_of_interest=roi_obs,
+                    intrinsic_reward=intrinsic_reward,
+                )
             )
-        )
         return env_action

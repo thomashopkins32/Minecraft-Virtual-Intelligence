@@ -19,7 +19,7 @@ from .monitoring.event import (
 )
 from .monitoring.event_bus import get_event_bus
 from .monitoring.callbacks.tensorboard import TensorboardWriter
-from .config import MonitoringConfig, TensorboardConfig, EventLoggingConfig
+from .config import TensorboardConfig
 
 
 def compute_output_shape(input_shape, kernel_size, stride):
@@ -392,32 +392,13 @@ def _format_tensors_for_logging(
     return result
 
 
-def setup_tensorboard(
-    config: TensorboardConfig, event_config: EventLoggingConfig
-) -> None:
+def setup_tensorboard(config: TensorboardConfig) -> None:
     event_bus = get_event_bus()
-    if not config.enabled:
-        return
-
     writer = TensorboardWriter(config)
     event_bus.subscribe(Start, writer)
     event_bus.subscribe(Stop, writer)
-    if event_config.log_module_forward:
-        event_bus.subscribe(ModuleForwardStart, writer)
-        event_bus.subscribe(ModuleForwardEnd, writer)
-    if event_config.log_env_steps:
-        event_bus.subscribe(EnvStep, writer)
-    if event_config.log_env_resets:
-        event_bus.subscribe(EnvReset, writer)
-    if event_config.log_actions:
-        event_bus.subscribe(Action, writer)
-
-
-def setup_monitoring(config: MonitoringConfig) -> None:
-    event_bus = get_event_bus()
-    if config.enabled:
-        event_bus.enable()
-    else:
-        event_bus.disable()
-
-    setup_tensorboard(config.tensorboard, config.events)
+    event_bus.subscribe(ModuleForwardStart, writer)
+    event_bus.subscribe(ModuleForwardEnd, writer)
+    event_bus.subscribe(EnvStep, writer)
+    event_bus.subscribe(EnvReset, writer)
+    event_bus.subscribe(Action, writer)

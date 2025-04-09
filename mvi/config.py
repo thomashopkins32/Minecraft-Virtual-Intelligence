@@ -143,7 +143,6 @@ class TensorboardConfig:
         Smoothing factor for scalar plots (0.0-1.0)
     """
 
-    enabled: bool = True
     log_dir: str = "runs"
     flush_secs: int = 10
     max_images_per_grid: int = 16
@@ -190,7 +189,6 @@ class EventLoggingConfig:
             "InverseDynamics",
         ]
     )
-    observation_format: str = "downsampled"
 
 
 @dataclass
@@ -217,12 +215,13 @@ class MonitoringConfig:
     """
 
     enabled: bool = True
-    tensorboard: TensorboardConfig = field(default_factory=TensorboardConfig)
+    tensorboard: TensorboardConfig | None = field(default_factory=TensorboardConfig)
     events: EventLoggingConfig = field(default_factory=EventLoggingConfig)
-    record_video: bool = False
-    video_fps: int = 30
-    save_checkpoints: bool = True
-    checkpoint_frequency: int = 1000
+    # TODO: Add video recording and checkpoint saving
+    # record_video: bool = False
+    # video_fps: int = 30
+    # save_checkpoints: bool = True
+    # checkpoint_frequency: int = 1000
 
 
 @dataclass

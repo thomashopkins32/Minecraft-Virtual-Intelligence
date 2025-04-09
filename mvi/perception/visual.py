@@ -29,9 +29,6 @@ class VisualPerception(nn.Module):
         # Combiner
         self.attention = nn.MultiheadAttention(out_channels * 2, 4, batch_first=True)
 
-        # Monitoring
-        self.start_monitoring()
-
     def forward(self, x_img: torch.Tensor, x_roi: torch.Tensor) -> torch.Tensor:
         """
         Process visual information from the environment.
@@ -60,12 +57,15 @@ class VisualPerception(nn.Module):
 
         return out
 
-    # TODO: Make a Monitoring Mixin class that can be used by all modules
     def stop_monitoring(self):
+        if not self.hooks:
+            return
         for hook in self.hooks:
             hook.remove()
 
     def start_monitoring(self):
+        self.foveated_perception.start_monitoring()
+        self.peripheral_perception.start_monitoring()
         self.hooks = add_forward_hooks(self, "VisualPerception")
 
 
@@ -92,9 +92,6 @@ class FoveatedPerception(nn.Module):
         self.mp3 = nn.AdaptiveMaxPool2d((1, 1))
         self.gelu = nn.GELU()
         self.flatten = nn.Flatten()
-
-        # Monitoring
-        self.start_monitoring()
 
     def forward(self, x_img: torch.Tensor) -> torch.Tensor:
         """
@@ -142,9 +139,6 @@ class PeripheralPerception(nn.Module):
         self.mp2 = nn.AdaptiveMaxPool2d((1, 1))
         self.gelu = nn.GELU()
         self.flatten = nn.Flatten()
-
-        # Monitoring
-        self.start_monitoring()
 
     def forward(self, x_img: torch.Tensor) -> torch.Tensor:
         """
