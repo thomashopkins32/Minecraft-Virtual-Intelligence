@@ -1,21 +1,10 @@
 from collections.abc import Iterable
 from dataclasses import dataclass, is_dataclass, field
 import argparse
-from typing import Any, Literal
+from typing import Any
 
 import yaml
 from dacite import from_dict
-
-# Define module names that can be monitored
-ModuleName = Literal[
-    "Affector",
-    "Critic",
-    "VisualPerception",
-    "FoveatedPerception",
-    "PeripheralPerception",
-    "ForwardDynamics",
-    "InverseDynamics",
-]
 
 
 @dataclass
@@ -145,9 +134,6 @@ class TensorboardConfig:
 
     log_dir: str = "runs"
     flush_secs: int = 10
-    max_images_per_grid: int = 16
-    histogram_bins: int = 30
-    scalar_smoothing: float = 0.6
 
 
 @dataclass
@@ -157,38 +143,11 @@ class EventLoggingConfig:
 
     Attributes
     ----------
-    log_env_steps : bool, optional
-        Whether to log environment step events
-    log_env_resets : bool, optional
-        Whether to log environment reset events
-    log_actions : bool, optional
-        Whether to log agent action events
-    log_module_forward : bool, optional
-        Whether to log module forward pass events
     module_step_frequency : int, optional
         Log module forward events every N steps (1 = every step)
-    modules_to_monitor : list[ModuleName] | None, optional
-        List of specific module names to monitor (empty = all modules)
-    observation_format : str, optional
-        Format for observation logging ('full', 'downsampled', or 'none')
     """
 
-    log_env_steps: bool = True
-    log_env_resets: bool = True
-    log_actions: bool = True
-    log_module_forward: bool = True
     module_step_frequency: int = 10
-    modules_to_monitor: list[ModuleName] | None = field(
-        default_factory=lambda: [
-            "Affector",
-            "Critic",
-            "VisualPerception",
-            "FoveatedPerception",
-            "PeripheralPerception",
-            "ForwardDynamics",
-            "InverseDynamics",
-        ]
-    )
 
 
 @dataclass
@@ -217,9 +176,7 @@ class MonitoringConfig:
     enabled: bool = True
     tensorboard: TensorboardConfig | None = field(default_factory=TensorboardConfig)
     events: EventLoggingConfig = field(default_factory=EventLoggingConfig)
-    # TODO: Add video recording and checkpoint saving
-    # record_video: bool = False
-    # video_fps: int = 30
+    # TODO: Add checkpointing
     # save_checkpoints: bool = True
     # checkpoint_frequency: int = 1000
 

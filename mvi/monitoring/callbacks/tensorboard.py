@@ -2,7 +2,7 @@ import torch
 from torch.utils.tensorboard.writer import SummaryWriter
 from torchvision.utils import make_grid
 from ..event import (
-    Event,
+    Action,
     Start,
     Stop,
     EnvStep,
@@ -16,30 +16,48 @@ from ...config import TensorboardConfig
 class TensorboardWriter:
     def __init__(self, config: TensorboardConfig) -> None:
         # TODO: Add the rest of the configuration
-        self.writer = SummaryWriter(log_dir=config.log_dir)
+        self.writer = SummaryWriter(
+            log_dir=config.log_dir, flush_secs=config.flush_secs
+        )
         self.step_counter: dict[str, int] = {}
+        self._config = config
 
-    def __call__(self, event: Event) -> None:
-        """
-        Callback for the event bus. Takes an event and adds it to the tensorboard.
+    def add_action(self, event: Action) -> None:
+        """Log Action event data to TensorBoard."""
+        # Get or initialize step counter for actions
+        if "action" not in self.step_counter:
+            self.step_counter["action"] = 0
+        step = self.step_counter["action"]
 
-        Parameters
-        ----------
-        event : Event
-            The event to add to the tensorboard
-        """
-        if isinstance(event, Start):
-            self.add_start(event)
-        elif isinstance(event, Stop):
-            self.add_stop(event)
-        elif isinstance(event, EnvStep):
-            self.add_env_step(event)
-        elif isinstance(event, EnvReset):
-            self.add_env_reset(event)
-        elif isinstance(event, ModuleForwardStart):
-            self.add_module_forward_start(event)
-        elif isinstance(event, ModuleForwardEnd):
-            self.add_module_forward_end(event)
+        # Log action-related tensors
+        self.writer.add_histogram("Action/action", event.action, global_step=step)
+        self.writer.add_histogram(
+            "Action/logp_action", event.logp_action, global_step=step
+        )
+        self.writer.add_histogram("Action/value", event.value, global_step=step)
+        self.writer.add_scalar(
+            "Action/intrinsic_reward", event.intrinsic_reward, global_step=step
+        )
+
+        # Log action distribution
+        if event.action_distribution is not None:
+            self.writer.add_histogram(
+                "Action/distribution", event.action_distribution, global_step=step
+            )
+
+        # Log visual features and region of interest as images
+        if event.visual_features is not None:
+            self._try_log_as_image(
+                "Action/visual_features", event.visual_features, step
+            )
+
+        if event.region_of_interest is not None:
+            self._try_log_as_image(
+                "Action/region_of_interest", event.region_of_interest, step
+            )
+
+        # Increment step counter
+        self.step_counter["action"] += 1
 
     def add_env_step(self, event: EnvStep) -> None:
         # Add scalar for reward

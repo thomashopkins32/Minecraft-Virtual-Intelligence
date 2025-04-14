@@ -43,24 +43,22 @@ def run() -> None:
     agent = AgentV1(config.agent, action_space)
 
     obs = env.reset()["rgb"].copy()  # type: ignore[no-untyped-call]
-    if monitoring_config.events.log_env_resets:
-        event_bus.publish(EnvReset(timestamp=datetime.now(), observation=obs))
+    event_bus.publish(EnvReset(timestamp=datetime.now(), observation=obs))
     obs = torch.tensor(obs, dtype=torch.float).unsqueeze(0)
     total_return = 0.0
     for _ in range(engine_config.max_steps):
         action = agent.act(obs).squeeze(0)
         next_obs, reward, _, _ = env.step(action)
         next_obs = torch.tensor(next_obs["rgb"].copy(), dtype=torch.float).unsqueeze(0)
-        if monitoring_config.events.log_env_steps:
-            event_bus.publish(
-                EnvStep(
-                    timestamp=datetime.now(),
-                    observation=obs,
-                    action=action,
-                    reward=reward,
-                    next_observation=next_obs,
-                )
+        event_bus.publish(
+            EnvStep(
+                timestamp=datetime.now(),
+                observation=obs,
+                action=action,
+                reward=reward,
+                next_observation=next_obs,
             )
+        )
         total_return += reward
         obs = next_obs
 

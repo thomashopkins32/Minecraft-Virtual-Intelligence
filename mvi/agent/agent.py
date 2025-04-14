@@ -62,17 +62,13 @@ class AgentV1:
             )
         return roi_obs
 
-    def start_monitoring(
-        self, *, log_module_forward: bool = True, log_actions: bool = True
-    ) -> None:
-        if log_module_forward:
-            self.vision.start_monitoring()
-            self.affector.start_monitoring()
-            self.critic.start_monitoring()
-            self.inverse_dynamics.start_monitoring()
-            self.forward_dynamics.start_monitoring()
-        if log_actions:
-            self.monitor_actions = True
+    def start_monitoring(self) -> None:
+        self.vision.start_monitoring()
+        self.affector.start_monitoring()
+        self.critic.start_monitoring()
+        self.inverse_dynamics.start_monitoring()
+        self.forward_dynamics.start_monitoring()
+        self.monitor_actions = True
 
     def stop_monitoring(self) -> None:
         self.vision.stop_monitoring()
