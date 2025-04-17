@@ -2073,7 +2073,7 @@ packages:
 - pypi: .
   name: mvi
   version: 0.0.1
-  sha256: f5eb46392dfc3fdb899f364f5712bdb68252525675c1e64dae5a8be1082c1b0d
+  sha256: 18f12209e3926a2a653189c8a3b7d926267ac3d9865f74e87a63febc3c7068fe
   requires_dist:
   - pyyaml
   - dacite
@@ -2083,6 +2083,7 @@ packages:
   - torch
   - torchvision
   - tqdm
+  - tensorboard
   - pre-commit ; extra == 'dev'
   - pyright ; extra == 'dev'
   - pytest ; extra == 'dev'
