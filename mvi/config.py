@@ -118,18 +118,10 @@ class TensorboardConfig:
 
     Attributes
     ----------
-    enabled : bool, optional
-        Whether to enable TensorBoard logging
     log_dir : str, optional
         Directory to save TensorBoard logs
     flush_secs : int, optional
         How often to flush data to disk (in seconds)
-    max_images_per_grid : int, optional
-        Maximum number of images to include in visualization grids
-    histogram_bins : int, optional
-        Number of bins for histogram visualizations
-    scalar_smoothing : float, optional
-        Smoothing factor for scalar plots (0.0-1.0)
     """
 
     log_dir: str = "runs"
@@ -163,14 +155,6 @@ class MonitoringConfig:
         Configuration for TensorBoard logging
     events : EventLoggingConfig, optional
         Configuration for event logging
-    record_video : bool, optional
-        Whether to record video of the agent's performance
-    video_fps : int, optional
-        Frames per second for recorded videos
-    save_checkpoints : bool, optional
-        Whether to save model checkpoints during training
-    checkpoint_frequency : int, optional
-        Save checkpoints every N steps
     """
 
     enabled: bool = True
@@ -190,10 +174,10 @@ class Config:
     ----------
     engine : EngineConfig
         Configuration for the engine
-    ppo : PPOConfig
-        Configuration for the PPO learning algorithm
-    logging : LoggingConfig
-        Configuration for logging
+    agent : AgentConfig
+        Configuration for the agent
+    monitoring : MonitoringConfig
+        Configuration for the monitoring system
     """
 
     engine: EngineConfig = field(default_factory=EngineConfig)

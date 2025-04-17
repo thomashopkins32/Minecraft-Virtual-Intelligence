@@ -68,6 +68,7 @@ pytorch = "*"
 torchvision = "*"
 numpy = "==1.26.4"
 scipy = "*"
+tensorboard = "*"
 
 [tool.pixi.pypi-dependencies]
 mvi = { path = ".", editable = true }
