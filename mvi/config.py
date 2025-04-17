@@ -1,5 +1,5 @@
 from collections.abc import Iterable
-from dataclasses import dataclass, is_dataclass
+from dataclasses import dataclass, is_dataclass, field
 import argparse
 from typing import Any
 
@@ -104,11 +104,65 @@ class AgentConfig:
         Height and width of region of interest for visual perception
     """
 
-    ppo: PPOConfig
-    icm: ICMConfig
-    td: TDConfig
+    ppo: PPOConfig = field(default_factory=PPOConfig)
+    icm: ICMConfig = field(default_factory=ICMConfig)
+    td: TDConfig = field(default_factory=TDConfig)
     max_buffer_size: int = 50
     roi_shape: tuple[int, int] = (32, 32)
+
+
+@dataclass
+class TensorboardConfig:
+    """
+    Configuration for TensorBoard logging
+
+    Attributes
+    ----------
+    log_dir : str, optional
+        Directory to save TensorBoard logs
+    flush_secs : int, optional
+        How often to flush data to disk (in seconds)
+    """
+
+    log_dir: str = "runs"
+    flush_secs: int = 10
+
+
+@dataclass
+class EventLoggingConfig:
+    """
+    Configuration for event logging
+
+    Attributes
+    ----------
+    module_step_frequency : int, optional
+        Log module forward events every N steps (1 = every step)
+    """
+
+    module_step_frequency: int = 10
+
+
+@dataclass
+class MonitoringConfig:
+    """
+    Configuration for the monitoring system
+
+    Attributes
+    ----------
+    enabled : bool, optional
+        Master switch to enable/disable all monitoring
+    tensorboard : TensorboardConfig, optional
+        Configuration for TensorBoard logging
+    events : EventLoggingConfig, optional
+        Configuration for event logging
+    """
+
+    enabled: bool = True
+    tensorboard: TensorboardConfig | None = field(default_factory=TensorboardConfig)
+    events: EventLoggingConfig = field(default_factory=EventLoggingConfig)
+    # TODO: Add checkpointing
+    # save_checkpoints: bool = True
+    # checkpoint_frequency: int = 1000
 
 
 @dataclass
@@ -120,12 +174,15 @@ class Config:
     ----------
     engine : EngineConfig
         Configuration for the engine
-    ppo : PPOConfig
-        Configuration for the PPO learning algorithm
+    agent : AgentConfig
+        Configuration for the agent
+    monitoring : MonitoringConfig
+        Configuration for the monitoring system
     """
 
-    engine: EngineConfig
-    agent: AgentConfig
+    engine: EngineConfig = field(default_factory=EngineConfig)
+    agent: AgentConfig = field(default_factory=AgentConfig)
+    monitoring: MonitoringConfig = field(default_factory=MonitoringConfig)
 
 
 def get_config() -> Config:
@@ -133,10 +190,7 @@ def get_config() -> Config:
     if arguments.file is not None:
         config = parse_config(arguments.file)
     else:
-        config = Config(
-            engine=EngineConfig(),
-            agent=AgentConfig(ppo=PPOConfig(), icm=ICMConfig(), td=TDConfig()),
-        )
+        config = Config()
     if arguments.key_value_pairs is not None:
         update_config(config, arguments.key_value_pairs)
     return config
@@ -184,18 +238,21 @@ def parse_config(yaml_path: str) -> Config:
 
     # Convert lists to tuples for fields that expect tuples
     def convert_lists_to_tuples(data_class, data):
-        for field in data_class.__dataclass_fields__.values():
-            field_name = field.name
+        for dc_field in data_class.__dataclass_fields__.values():
+            field_name = dc_field.name
             if field_name in data:
                 # Check if the field type is a tuple
-                if hasattr(field.type, "__origin__") and field.type.__origin__ is tuple:
+                if (
+                    hasattr(dc_field.type, "__origin__")
+                    and dc_field.type.__origin__ is tuple
+                ):
                     if isinstance(data[field_name], list):
                         data[field_name] = tuple(data[field_name])
                 # Handle nested dataclasses
-                elif is_dataclass(field.type) and isinstance(
+                elif is_dataclass(dc_field.type) and isinstance(
                     data.get(field_name), dict
                 ):
-                    convert_lists_to_tuples(field.type, data[field_name])
+                    convert_lists_to_tuples(dc_field.type, data[field_name])
 
     # Process the config dictionary before passing to dacite
     convert_lists_to_tuples(Config, config_dict)
