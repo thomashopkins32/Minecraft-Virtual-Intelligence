@@ -27,6 +27,7 @@ dependencies = [
     "torchvision",
     "tqdm",
     "tensorboard",
+    "craftground",
 ]
 
 [tool.hatch.build.targets.wheel]
@@ -50,6 +51,7 @@ dev = [
     "pytest-mock",
     "ruff",
     "types-PyYAML",
+    "ipython",
 ]
 
 [tool.pyright]
@@ -61,6 +63,9 @@ exclude = ["**/build"]
 channels = ["conda-forge", "pytorch"]
 platforms = ["linux-64"]
 
+[tool.pixi.build-dependencies]
+cmake = "*"
+
 [tool.pixi.host-dependencies]
 hatchling = "*"
 
@@ -70,10 +75,15 @@ torchvision = "*"
 numpy = "==1.26.4"
 scipy = "*"
 tensorboard = "*"
+libflite = "*"
+libopengl = "*"
+libzlib = "*"
+libpng = "*"
+glew = "*"
+openjdk = "21.*"
 
 [tool.pixi.pypi-dependencies]
 mvi = { path = ".", editable = true }
-MineDojo = { git = "https://github.com/thomashopkins32/MineDojo.git", rev = "main" }
 
 [tool.pixi.environments]
 default = { solve-group = "default" }
