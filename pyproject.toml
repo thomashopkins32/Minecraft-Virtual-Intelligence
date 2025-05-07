@@ -20,8 +20,9 @@ classifiers = [
 dependencies = [
     "PyYAML",
     "dacite",
+    "gym",
     "gymnasium",
-    "numpy==1.26.4",
+    "numpy",
     "scipy",
     "torch",
     "torchvision",
@@ -67,13 +68,14 @@ hatchling = "*"
 [tool.pixi.dependencies]
 pytorch = "*"
 torchvision = "*"
-numpy = "==1.26.4"
+numpy = "*"
 scipy = "*"
 tensorboard = "*"
+openjdk = "8.*"
 
 [tool.pixi.pypi-dependencies]
 mvi = { path = ".", editable = true }
-MineDojo = { git = "https://github.com/thomashopkins32/MineDojo.git", rev = "main" }
+malmoenv = { git = "https://github.com/microsoft/malmo.git", rev = "0.37.0", subdirectory = "MalmoEnv" }
 
 [tool.pixi.environments]
 default = { solve-group = "default" }
