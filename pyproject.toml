@@ -70,6 +70,9 @@ torchvision = "*"
 numpy = "==1.26.4"
 scipy = "*"
 tensorboard = "*"
+gradle = "*"
+opnejdk = "21.*"
+
 
 [tool.pixi.pypi-dependencies]
 mvi = { path = ".", editable = true }
