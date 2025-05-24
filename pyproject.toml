@@ -71,7 +71,7 @@ numpy = "==1.26.4"
 scipy = "*"
 tensorboard = "*"
 gradle = "*"
-opnejdk = "21.*"
+openjdk = "21.*"
 
 
 [tool.pixi.pypi-dependencies]
