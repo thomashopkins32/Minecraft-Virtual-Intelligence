@@ -5,6 +5,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.server.ServerStartingEvent;
+import net.minecraftforge.event.server.ServerStoppingEvent;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -20,6 +21,7 @@ public class MviMod {
     public static final String MODID = "mvi";
     // Directly reference a slf4j logger
     private static final Logger LOGGER = LogUtils.getLogger();
+    private Thread networkThread;
 
     public MviMod(FMLJavaModLoadingContext context) {
         // Register ourselves for server and other game events we are interested in
@@ -32,14 +34,28 @@ public class MviMod {
     @SubscribeEvent
     public void onServerStarting(ServerStartingEvent event) {
         LOGGER.info("Starting MVI Mod Server");
-
-        // TODO: Start TCP server in new thread
+        startNetworkServer();
     }
 
     @SubscribeEvent
     public void onServerStopping(ServerStoppingEvent event) {
         LOGGER.info("Stopping MVI Mod Server...");
+        stopNetworkServer();
+    }
 
-        // TODO: Stop TCP server
+    private void startNetworkServer() {
+        if (networkThread != null || !networkThread.isAlive()) {
+            networkThread = new Thread(new NetworkServer());
+            networkThread.start();
+            LOGGER.info("Network server started on port 12345");
+        }
+    }
+
+    private void stopNetworkServer() {
+        if (networkThread != null && networkThread.isAlive()) {
+            networkThread.interrupt();
+            networkThread = null;
+            LOGGER.info("Network server stopped.");
+        }
     }
 }
