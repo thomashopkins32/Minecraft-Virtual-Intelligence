@@ -52,6 +52,20 @@ public class NetworkHandler implements Runnable {
         }
     }
 
+
+    public void sendResponse(byte[] frameData, int reward) {
+        try {
+            PrintWriter out = new PrintWriter(this.clientSocket.getOutputStream(), true);
+            out.println(frameData.length);
+            out.println(reward);
+            out.println(frameData);
+            out.flush();
+        } catch (IOException e) {
+            LOGGER.error("Error sending response", e);
+        }
+    }
+
+
     private void processCommand(String command, PrintWriter out) {
         LOGGER.info("Received command: " + command);
     }

@@ -1,15 +1,9 @@
 package com.mvi.mvimod;
 
-import java.util.Queue;
-import java.util.concurrent.ConcurrentLinkedQueue;
-
-import net.minecraft.world.level.gameevent.GameEvent;
 
 public class DataBridge {
     private static DataBridge instance;
     private NetworkHandler networkHandler;
-    private Queue<GameEvent> eventQueue = new ConcurrentLinkedQueue<>();
-    private byte[] latestFrame;
     
     public static DataBridge getInstance() {
         if (instance == null) {
@@ -21,19 +15,16 @@ public class DataBridge {
     public void setNetworkHandler(NetworkHandler handler) {
         this.networkHandler = handler;
     }
-    
-    public void sendFrame(byte[] frameData) {
-        this.latestFrame = frameData;
+
+    public void sendEvent(String eventType, String data) {
         if (networkHandler != null) {
-            networkHandler.sendFrameToClient(frameData);
+            // TODO: Implement this
         }
     }
     
-    public void sendEvent(String eventType, String data) {
-        GameEvent event = new GameEvent(eventType, data);
-        eventQueue.offer(event);
+    public void sendFrame(byte[] frameData) {
         if (networkHandler != null) {
-            networkHandler.sendEventToClient(event);
+            networkHandler.sendResponse(frameData, 0);
         }
-    } 
+    }
 }

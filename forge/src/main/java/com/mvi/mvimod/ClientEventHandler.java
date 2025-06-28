@@ -1,5 +1,9 @@
 package com.mvi.mvimod;
 
+import java.nio.ByteBuffer;
+
+import org.lwjgl.opengl.GL11;
+
 import net.minecraft.client.Minecraft;
 import com.mojang.blaze3d.platform.Window;
 import net.minecraft.world.entity.player.Player;
@@ -33,14 +37,13 @@ public class ClientEventHandler {
     @SubscribeEvent
     public void onPlayerDeath(LivingDeathEvent event) {
         if (event.getEntity() instanceof Player) {
-            dataBridge.sendEvent("PLAYER_DEATH", "");
+            dataBridge.sendEvent("PLAYER_DEATH", "-100.0");
         }
     }
     
     private void captureAndSendFrame() {
         Minecraft mc = Minecraft.getInstance();
         if (mc.level != null && mc.player != null) {
-            // Capture frame (you'll need to implement this)
             byte[] frameData = captureScreenshot(mc.getWindow());
             dataBridge.sendFrame(frameData);
         }

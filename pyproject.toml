@@ -96,3 +96,4 @@ python = "3.12.*"
 
 [tool.pixi.tasks]
 mvi = "mvi"
+minecraft-client = "cd forge && gradle runClient"

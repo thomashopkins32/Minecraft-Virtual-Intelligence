@@ -40,7 +40,7 @@ public class MviMod {
     }
 
     private void startNetworkServer() {
-        if (networkThread != null || !networkThread.isAlive()) {
+        if (networkThread == null || !networkThread.isAlive()) {
             networkThread = new Thread(new NetworkHandler(Config.PORT.get()));
             networkThread.start();
             LOGGER.info("Network server started on port " + Config.PORT.get());
