@@ -3,6 +3,7 @@ plugins {
     id 'idea'
     id 'maven-publish'
     id 'net.minecraftforge.gradle' version '[6.0.24,6.2)'
+    id 'com.diffplug.spotless' version '7.0.4'
 }
 
 version = mod_version
@@ -197,6 +198,21 @@ tasks.withType(JavaCompile).configureEach {
 // IntelliJ no longer downloads javadocs and sources by default.
 // This tells Gradle to force IDEA to do it.
 idea.module { downloadJavadoc = downloadSources = true }
+
+spotless {
+    java {
+        removeUnusedImports()
+        endWithNewline()
+        cleanthat()
+        googleJavaFormat('1.19.2')
+    }
+}
+
+check.dependsOn spotlessCheck
+
+test {
+    useJUnitPlatform()
+}
 
 eclipse {
     // Run everytime eclipse builds the code

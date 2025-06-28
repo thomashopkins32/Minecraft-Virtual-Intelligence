@@ -2504,7 +2504,7 @@ packages:
 - pypi: .
   name: mvi
   version: 0.0.1
-  sha256: 237699e94dba3162970016b80fca145181e9ddcfeb4e54ad1203d172adbb2d4e
+  sha256: cce9c5ef6bb1afa3c809eb69580bb84012344e3039962eddb566410602d242fd
   requires_dist:
   - pyyaml
   - dacite
