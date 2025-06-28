@@ -70,6 +70,9 @@ torchvision = "*"
 numpy = "==1.26.4"
 scipy = "*"
 tensorboard = "*"
+gradle = "*"
+openjdk = "21.*"
+
 
 [tool.pixi.pypi-dependencies]
 mvi = { path = ".", editable = true }
@@ -93,3 +96,5 @@ python = "3.12.*"
 
 [tool.pixi.tasks]
 mvi = "mvi"
+minecraft-client = "cd forge && gradle runClient"
+minecraft-build = "cd forge && gradle build"
