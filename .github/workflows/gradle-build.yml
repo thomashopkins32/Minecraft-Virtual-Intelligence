@@ -2,6 +2,8 @@ name: Java Build
 
 on:
   push:
+    branches:
+      - main
   pull_request:
   workflow_dispatch:
 
@@ -18,7 +20,7 @@ jobs:
           cache: false
           frozen: true
           locked: false
-          environments: ["default"]
+          environments: "default"
 
       - name: Build with Gradle
         run: |
