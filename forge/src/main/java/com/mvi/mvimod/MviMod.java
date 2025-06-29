@@ -1,13 +1,16 @@
 package com.mvi.mvimod;
 
+import com.mojang.blaze3d.platform.Window;
 import com.mojang.logging.LogUtils;
+import net.minecraft.client.Minecraft;
+import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.event.server.ServerStartingEvent;
-import net.minecraftforge.event.server.ServerStoppingEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.config.ModConfig;
+import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import net.minecraftforge.fml.loading.FMLEnvironment;
 import org.slf4j.Logger;
 
 // The value here should match an entry in the META-INF/mods.toml file
@@ -17,41 +20,63 @@ public class MviMod {
   public static final String MODID = "mvi";
   // Directly reference a slf4j logger
   private static final Logger LOGGER = LogUtils.getLogger();
-  private Thread networkThread;
+
+  private static Thread networkThread;
 
   public MviMod(FMLJavaModLoadingContext context) {
-    // Register ourselves for server and other game events we are interested in
-    MinecraftForge.EVENT_BUS.register(this);
+    // Register client event handler
+    MinecraftForge.EVENT_BUS.register(ClientEventHandler.class);
 
     // Register our mod's ForgeConfigSpec so that Forge can create and load the config file for us
     context.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
+
+    // Register for MOD bus events (lifecycle events)
+    context.getModEventBus().register(this);
   }
 
   @SubscribeEvent
-  public void onServerStarting(ServerStartingEvent event) {
-    LOGGER.info("Starting MVI Mod Server");
-    startNetworkServer();
-  }
-
-  @SubscribeEvent
-  public void onServerStopping(ServerStoppingEvent event) {
-    LOGGER.info("Stopping MVI Mod Server...");
-    stopNetworkServer();
-  }
-
-  private void startNetworkServer() {
-    if (networkThread == null || !networkThread.isAlive()) {
-      networkThread = new Thread(new NetworkHandler(Config.PORT.get()));
-      networkThread.start();
-      LOGGER.info("Network server started on port " + Config.PORT.get());
+  public void onClientSetup(FMLClientSetupEvent event) {
+    // Only run on client side
+    if (FMLEnvironment.dist == Dist.CLIENT) {
+      event.enqueueWork(
+          () -> {
+            setupWindow();
+            setupClientNetworking();
+          });
     }
   }
 
-  private void stopNetworkServer() {
-    if (networkThread != null && networkThread.isAlive()) {
-      networkThread.interrupt();
-      networkThread = null;
-      LOGGER.info("Network server stopped.");
+  private void setupWindow() {
+    Minecraft mc = Minecraft.getInstance();
+    if (mc.getWindow() != null) {
+      Window window = mc.getWindow();
+      int configWidth = Config.WINDOW_WIDTH.get();
+      int configHeight = Config.WINDOW_HEIGHT.get();
+
+      // Only resize if different from current size
+      if (window.getWidth() != configWidth || window.getHeight() != configHeight) {
+        window.setWindowed(configWidth, configHeight);
+        LOGGER.info("Window resized to {}x{}", configWidth, configHeight);
+      } else {
+        LOGGER.info("Window already set to {}x{}", configWidth, configHeight);
+      }
+    }
+  }
+
+  private void setupClientNetworking() {
+    if (networkThread == null || !networkThread.isAlive()) {
+      LOGGER.info("Starting client-side network handler");
+      NetworkHandler networkHandler =
+          new NetworkHandler(Config.READ_PORT.get(), Config.WRITE_PORT.get());
+      DataBridge.getInstance().setNetworkHandler(networkHandler);
+      networkThread = new Thread(networkHandler);
+      networkThread.setDaemon(true); // Daemon thread so it doesn't prevent JVM shutdown
+      networkThread.start();
+      LOGGER.info(
+          "Client network handler started on TCP port "
+              + Config.READ_PORT.get()
+              + " and UDP port "
+              + Config.WRITE_PORT.get());
     }
   }
 }
