@@ -18,13 +18,14 @@ from PIL import Image
 
 from .config import Config
 
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
 
 @dataclass
 class ConnectionConfig:
     """Configuration for Minecraft Forge mod connection"""
-    host: str = "localhost"
-    command_port: int = 12345  # TCP port for commands
-    data_port: int = 12346     # UDP port for frame data
+    command_port: str = "/tmp/mvi_receive.sock"
+    data_port: str = "/tmp/mvi_send.sock"
     width: int = 1024
     height: int = 768
     timeout: float = 30.0
@@ -61,18 +62,23 @@ class MinecraftForgeClient:
         """
         for attempt in range(self.config.max_retries):
             try:
-                # Connect TCP socket for commands
-                self.command_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                # Connect Unix domain socket for commands
+                self.command_socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
                 self.command_socket.settimeout(self.config.timeout)
-                self.command_socket.connect((self.config.host, self.config.command_port))
+                self.command_socket.connect(self.config.command_port)
                 
-                # Create UDP socket for frame data
-                self.data_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                # Create Unix domain socket for frame data with performance optimizations
+                self.data_socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
                 self.data_socket.settimeout(self.config.timeout)
-                self.data_socket.bind(('', self.config.data_port))  # Bind to receive data
+                
+                # Performance optimizations for large data transfers
+                # Set large receive buffer (1MB) for better throughput
+                self.data_socket.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 1024 * 1024)
+                
+                self.data_socket.connect(self.config.data_port)
                 
                 self.connected = True
-                self.logger.info(f"Connected to Minecraft Forge mod - TCP: {self.config.host}:{self.config.command_port}, UDP: {self.config.data_port}")
+                self.logger.info(f"Connected to Minecraft Forge mod - Command: {self.config.command_port}, Data: {self.config.data_port}")
                 return True
             except (socket.error, ConnectionRefusedError) as e:
                 self.logger.warning(f"Connection attempt {attempt + 1} failed: {e}")
@@ -137,7 +143,7 @@ class MinecraftForgeClient:
     
     def receive_frame_data(self) -> np.ndarray | None:
         """
-        Receive frame data from the Minecraft Forge mod via UDP
+        Receive frame data from the Minecraft Forge mod via Unix domain socket
         
         Returns
         -------
@@ -149,24 +155,30 @@ class MinecraftForgeClient:
             return None
         
         try:
-            # Receive UDP packet (max 65507 bytes for UDP)
-            data, addr = self.data_socket.recvfrom(65507)
+            assert self.data_socket is not None  # Type checker hint
             
-            if len(data) < 8:
-                self.logger.error("Received packet too small for protocol")
+            # Fastest approach: receive header + data in one shot if possible
+            # First get just the header to know the total size
+            header_data = self.data_socket.recv(8, socket.MSG_WAITALL)
+            if len(header_data) != 8:
+                self.logger.error("Failed to receive complete protocol header, got %d bytes", len(header_data))
+                return None
+            else:
+                self.logger.info("Received header: %s", len(header_data))
+
+            
+            # Parse header
+            reward = int.from_bytes(header_data[0:4], byteorder='big', signed=True)
+            data_length = int.from_bytes(header_data[4:8], byteorder='big', signed=False)
+            self.logger.info("Received reward: %d, data length: %d", reward, data_length)
+            
+            if data_length == 0:
                 return None
             
-            # Parse protocol: [reward:4bytes][data_length:4bytes][data:N bytes]
-            reward = int.from_bytes(data[0:4], byteorder='big', signed=True)
-            data_length = int.from_bytes(data[4:8], byteorder='big', signed=False)
-            
-            if len(data) != 8 + data_length:
-                self.logger.error(f"Packet size mismatch: expected {8 + data_length}, got {len(data)}")
-                return None
-            
-            frame_data = data[8:8+data_length]
-            
-            if len(frame_data) == 0:
+            # Receive all frame data in single call with MSG_WAITALL
+            frame_data = self.data_socket.recv(data_length, socket.MSG_WAITALL)
+            if len(frame_data) != data_length:
+                self.logger.error(f"Failed to receive complete frame data: expected {data_length}, got {len(frame_data)}")
                 return None
 
             # Parse frame data using delta encoding protocol
@@ -180,6 +192,44 @@ class MinecraftForgeClient:
             self.logger.error(f"Failed to receive frame data: {e}")
             self.connected = False
             return None
+    
+    def _receive_all_fallback(self, num_bytes: int) -> bytes | None:
+        """
+        Fallback method for systems that don't support MSG_WAITALL properly
+        Uses pre-allocated buffer and recv_into for maximum speed
+        
+        Parameters
+        ----------
+        num_bytes : int
+            Number of bytes to receive
+            
+        Returns
+        -------
+        bytes | None
+            Complete data if successful, None otherwise
+        """
+        assert self.data_socket is not None  # Type checker hint
+        
+        # Pre-allocate buffer to avoid repeated allocations
+        buffer = bytearray(num_bytes)
+        view = memoryview(buffer)
+        pos = 0
+        
+        while pos < num_bytes:
+            try:
+                # Use recv_into for zero-copy operation
+                chunk_size = self.data_socket.recv_into(view[pos:])
+                if chunk_size == 0:
+                    self.logger.error("Socket closed by remote host")
+                    return None
+                    
+                pos += chunk_size
+                
+            except socket.error as e:
+                self.logger.error(f"Socket error while receiving data: {e}")
+                return None
+        
+        return bytes(buffer)
     
     def _parse_frame_data(self, frame_data: bytes) -> np.ndarray | None:
         """

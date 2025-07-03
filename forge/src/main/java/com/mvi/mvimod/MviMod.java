@@ -66,8 +66,7 @@ public class MviMod {
   private void setupClientNetworking() {
     if (networkThread == null || !networkThread.isAlive()) {
       LOGGER.info("Starting client-side network handler");
-      NetworkHandler networkHandler =
-          new NetworkHandler(Config.READ_PORT.get(), Config.WRITE_PORT.get());
+      NetworkHandler networkHandler = new NetworkHandler();
       DataBridge.getInstance().setNetworkHandler(networkHandler);
       networkThread = new Thread(networkHandler);
       networkThread.setDaemon(true); // Daemon thread so it doesn't prevent JVM shutdown
