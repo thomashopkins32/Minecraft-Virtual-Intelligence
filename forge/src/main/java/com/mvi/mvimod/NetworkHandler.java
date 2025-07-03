@@ -26,13 +26,14 @@ public class NetworkHandler implements Runnable {
   private static final String RECEIVE_SOCKET_PATH = "/tmp/mvi_receive.sock";
   private static final ExecutorService senderExecutor = Executors.newCachedThreadPool();
   private static final ExecutorService receiverExecutor = Executors.newCachedThreadPool();
+  private Thread sendThread;
+  private Thread receiveThread;
   private ServerSocketChannel sendSocketChannel;
   private ServerSocketChannel receiveSocketChannel;
   private final AtomicBoolean running = new AtomicBoolean(true);
 
   // Async frame sending
   private final BlockingQueue<FrameData> frameQueue = new LinkedBlockingQueue<>();
-
 
   // Frame data container
   private static class FrameData {
@@ -61,8 +62,35 @@ public class NetworkHandler implements Runnable {
       receiveSocketChannel.bind(UnixDomainSocketAddress.of(RECEIVE_SOCKET_PATH));
       receiveSocketChannel.configureBlocking(true);
 
-      new Thread(this::acceptSendClients).start();
-      new Thread(this::acceptReceiveClients).start();
+      LOGGER.info("Socket files created: {} and {}", SEND_SOCKET_PATH, RECEIVE_SOCKET_PATH);
+
+      // Verify socket files were actually created
+      if (!Files.exists(Path.of(SEND_SOCKET_PATH))) {
+        throw new IOException("Failed to create send socket file: " + SEND_SOCKET_PATH);
+      }
+      if (!Files.exists(Path.of(RECEIVE_SOCKET_PATH))) {
+        throw new IOException("Failed to create receive socket file: " + RECEIVE_SOCKET_PATH);
+      }
+      
+      LOGGER.info("Socket files verified - Send: {}, Receive: {}", 
+                  Files.exists(Path.of(SEND_SOCKET_PATH)), 
+                  Files.exists(Path.of(RECEIVE_SOCKET_PATH)));
+
+      sendThread = new Thread(this::acceptSendClients, "SendClients");
+      receiveThread = new Thread(this::acceptReceiveClients, "ReceiveClients");
+      
+      sendThread.start();
+      receiveThread.start();
+
+      // Keep main thread alive while server is running
+      while (this.running.get() && !Thread.currentThread().isInterrupted()) {
+        try {
+          Thread.sleep(1000); // Check every second
+        } catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+          break;
+        }
+      }
 
     } catch (IOException e) {
       LOGGER.error("Error starting network server", e);
@@ -72,27 +100,43 @@ public class NetworkHandler implements Runnable {
   }
 
   private void acceptSendClients() {
-    while (this.running.get()) {
+    LOGGER.info("Send clients acceptor thread started");
+    while (this.running.get() && !Thread.currentThread().isInterrupted()) {
       try {
         SocketChannel clientSocket = sendSocketChannel.accept();
+        clientSocket.socket().setSendBufferSize(1024 * 1024); // 1MB send buffer
+        clientSocket.socket().setTcpNoDelay(true); // Disable Nagle's algorithm for lower latency
         LOGGER.info("Send client connected: " + clientSocket.getRemoteAddress());
         handleSendClient(clientSocket);
       } catch (IOException e) {
-        LOGGER.error("Error accepting send client", e);
+        if (this.running.get()) {
+          LOGGER.error("Error accepting send client", e);
+        } else {
+          LOGGER.info("Send socket channel closed, stopping accept loop");
+          break;
+        }
       }
     }
+    LOGGER.info("Send clients acceptor thread stopped");
   }
 
   private void acceptReceiveClients() {
-    while (this.running.get()) {
+    LOGGER.info("Receive clients acceptor thread started");
+    while (this.running.get() && !Thread.currentThread().isInterrupted()) {
       try {
         SocketChannel clientSocket = receiveSocketChannel.accept();
         LOGGER.info("Receive client connected: " + clientSocket.getRemoteAddress());
         handleReceiveClient(clientSocket);
       } catch (IOException e) {
-        LOGGER.error("Error accepting receive client", e);
+        if (this.running.get()) {
+          LOGGER.error("Error accepting receive client", e);
+        } else {
+          LOGGER.info("Receive socket channel closed, stopping accept loop");
+          break;
+        }
       }
     }
+    LOGGER.info("Receive clients acceptor thread stopped");
   }
 
   private void handleReceiveClient(SocketChannel clientSocket) {
@@ -166,7 +210,11 @@ public class NetworkHandler implements Runnable {
       buffer.putInt(frameData.data.length);
       buffer.put(frameData.data);
       buffer.flip();
-      clientSocket.write(buffer);
+      int bytesWritten = clientSocket.write(buffer);
+      LOGGER.info("Frame sent: {} bytes", bytesWritten);
+      if (bytesWritten != buffer.remaining()) {
+        LOGGER.error("Data size mismatch! Expected: {}, Actual: {}", buffer.remaining(), bytesWritten);
+      }
     } catch (IOException e) {
       LOGGER.error("Error sending frame", e);
     }
@@ -179,6 +227,24 @@ public class NetworkHandler implements Runnable {
   private void cleanup() {
     LOGGER.info("Shutting down NetworkHandler...");
     this.running.set(false);
+    // Wait for threads to finish
+    if (this.sendThread != null) {
+      try {
+        this.sendThread.interrupt();
+        this.sendThread.join(5000); // Wait up to 5 seconds
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+      }
+    }
+    
+    if (this.receiveThread != null) {
+      try {
+        this.receiveThread.interrupt();
+        this.receiveThread.join(5000); // Wait up to 5 seconds
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+      }
+    }
 
     // Shutdown executors
     senderExecutor.shutdown();
