@@ -59,7 +59,8 @@ public class Config {
 
     JPEG_QUALITY =
         BUILDER
-            .comment("JPEG compression quality (0.1 = high compression/low quality, 1.0 = low compression/high quality)")
+            .comment(
+                "JPEG compression quality (0.1 = high compression/low quality, 1.0 = low compression/high quality)")
             .defineInRange("jpeg_quality", 0.7, 0.1, 1.0);
     MAX_FRAME_SIZE =
         BUILDER

@@ -5,21 +5,21 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
+import java.net.StandardProtocolFamily;
+import java.net.StandardSocketOptions;
+import java.net.UnixDomainSocketAddress;
+import java.nio.ByteBuffer;
+import java.nio.channels.ServerSocketChannel;
+import java.nio.channels.SocketChannel;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.channels.SocketChannel;
-import java.nio.ByteBuffer;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicBoolean;
-import org.slf4j.Logger;
-import java.net.UnixDomainSocketAddress;
-import java.nio.channels.ServerSocketChannel;
-import java.net.StandardProtocolFamily;
-import java.net.StandardSocketOptions;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
+import org.slf4j.Logger;
 
 public class NetworkHandler implements Runnable {
   private static final Logger LOGGER = LogUtils.getLogger();
@@ -38,7 +38,7 @@ public class NetworkHandler implements Runnable {
   private final Semaphore frameAvailable = new Semaphore(0);
 
   // Observation data container
-  private static class Observation{
+  private static class Observation {
     final byte[] frameBuffer;
     final int reward;
     final long timestamp;
@@ -73,14 +73,15 @@ public class NetworkHandler implements Runnable {
       if (!Files.exists(Path.of(RECEIVE_SOCKET_PATH))) {
         throw new IOException("Failed to create receive socket file: " + RECEIVE_SOCKET_PATH);
       }
-      
-      LOGGER.info("Socket files verified - Send: {}, Receive: {}", 
-                  Files.exists(Path.of(SEND_SOCKET_PATH)), 
-                  Files.exists(Path.of(RECEIVE_SOCKET_PATH)));
+
+      LOGGER.info(
+          "Socket files verified - Send: {}, Receive: {}",
+          Files.exists(Path.of(SEND_SOCKET_PATH)),
+          Files.exists(Path.of(RECEIVE_SOCKET_PATH)));
 
       sendThread = new Thread(this::acceptSendClients, "SendClients");
       receiveThread = new Thread(this::acceptReceiveClients, "ReceiveClients");
-      
+
       sendThread.start();
       receiveThread.start();
 
@@ -145,7 +146,8 @@ public class NetworkHandler implements Runnable {
     receiverExecutor.submit(
         () -> {
           try (BufferedReader in =
-                  new BufferedReader(new InputStreamReader(clientSocket.socket().getInputStream()));
+                  new BufferedReader(
+                      new InputStreamReader(clientSocket.socket().getInputStream()));
               PrintWriter out = new PrintWriter(clientSocket.socket().getOutputStream(), true)) {
 
             String inputLine;
@@ -238,7 +240,7 @@ public class NetworkHandler implements Runnable {
         Thread.currentThread().interrupt();
       }
     }
-    
+
     if (this.receiveThread != null) {
       try {
         this.receiveThread.interrupt();

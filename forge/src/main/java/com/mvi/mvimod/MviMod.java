@@ -77,17 +77,20 @@ public class MviMod {
               + Config.WRITE_PORT.get());
 
       // Add a shutdown hook to properly cleanup socket files
-      Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-        LOGGER.info("Shutting down client-side network handler");
-        if (networkThread != null) {
-          networkThread.interrupt();
-          try {
-            networkThread.join(5000);
-          } catch (InterruptedException e) {
-            LOGGER.error("Interrupted while waiting for network thread to finish", e);
-          }
-        }
-      }));
+      Runtime.getRuntime()
+          .addShutdownHook(
+              new Thread(
+                  () -> {
+                    LOGGER.info("Shutting down client-side network handler");
+                    if (networkThread != null) {
+                      networkThread.interrupt();
+                      try {
+                        networkThread.join(5000);
+                      } catch (InterruptedException e) {
+                        LOGGER.error("Interrupted while waiting for network thread to finish", e);
+                      }
+                    }
+                  }));
     }
   }
 }
