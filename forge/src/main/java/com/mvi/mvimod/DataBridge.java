@@ -33,7 +33,7 @@ public class DataBridge {
   public void sendFrame(byte[] frameData) {
     if (networkHandler != null) {
       LOGGER.info("DataBridge sending frame data (size: {} bytes)", frameData.length);
-      networkHandler.sendResponse(frameData, 0);
+      networkHandler.setLatest(frameData, 0);
     } else {
       LOGGER.warn("Cannot send frame - NetworkHandler is null");
     }

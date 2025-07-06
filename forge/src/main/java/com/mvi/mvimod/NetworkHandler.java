@@ -9,16 +9,17 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.channels.SocketChannel;
 import java.nio.ByteBuffer;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.slf4j.Logger;
 import java.net.UnixDomainSocketAddress;
 import java.nio.channels.ServerSocketChannel;
 import java.net.StandardProtocolFamily;
+import java.net.StandardSocketOptions;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.Semaphore;
 
 public class NetworkHandler implements Runnable {
   private static final Logger LOGGER = LogUtils.getLogger();
@@ -32,17 +33,18 @@ public class NetworkHandler implements Runnable {
   private ServerSocketChannel receiveSocketChannel;
   private final AtomicBoolean running = new AtomicBoolean(true);
 
-  // Async frame sending
-  private final BlockingQueue<FrameData> frameQueue = new LinkedBlockingQueue<>();
+  // Async observation sending
+  private final AtomicReference<Observation> latestObservation = new AtomicReference<Observation>();
+  private final Semaphore frameAvailable = new Semaphore(0);
 
-  // Frame data container
-  private static class FrameData {
-    final byte[] data;
+  // Observation data container
+  private static class Observation{
+    final byte[] frameBuffer;
     final int reward;
     final long timestamp;
 
-    FrameData(byte[] data, int reward) {
-      this.data = data;
+    Observation(byte[] frameBuffer, int reward) {
+      this.frameBuffer = frameBuffer;
       this.reward = reward;
       this.timestamp = System.currentTimeMillis();
     }
@@ -85,7 +87,7 @@ public class NetworkHandler implements Runnable {
       // Keep main thread alive while server is running
       while (this.running.get() && !Thread.currentThread().isInterrupted()) {
         try {
-          Thread.sleep(1000); // Check every second
+          Thread.sleep(1000);
         } catch (InterruptedException e) {
           Thread.currentThread().interrupt();
           break;
@@ -104,9 +106,9 @@ public class NetworkHandler implements Runnable {
     while (this.running.get() && !Thread.currentThread().isInterrupted()) {
       try {
         SocketChannel clientSocket = sendSocketChannel.accept();
-        clientSocket.socket().setSendBufferSize(1024 * 1024); // 1MB send buffer
-        clientSocket.socket().setTcpNoDelay(true); // Disable Nagle's algorithm for lower latency
         LOGGER.info("Send client connected: " + clientSocket.getRemoteAddress());
+        // 1MB send buffer which can fit small frames
+        clientSocket.setOption(StandardSocketOptions.SO_SNDBUF, 1024 * 1024);
         handleSendClient(clientSocket);
       } catch (IOException e) {
         if (this.running.get()) {
@@ -172,51 +174,51 @@ public class NetworkHandler implements Runnable {
   private void handleSendClient(SocketChannel clientSocket) {
     senderExecutor.submit(
         () -> {
-          while (this.running.get()) {
+          try {
+            while (this.running.get()) {
+              try {
+                frameAvailable.acquire();
+                Observation observation = latestObservation.get();
+                if (observation != null) {
+                  sendObservationImmediate(observation, clientSocket);
+                }
+              } catch (InterruptedException e) {
+                LOGGER.error("Interrupted while waiting for frame", e);
+                this.running.set(false);
+              }
+            }
+          } finally {
             try {
-              FrameData frameData = frameQueue.take(); // Blocks until frame available
-              sendFrameImmediate(frameData, clientSocket);
-            } catch (InterruptedException e) {
-              Thread.currentThread().interrupt();
-              break;
+              clientSocket.close();
+            } catch (IOException e) {
+              LOGGER.error("Error closing client socket", e);
             }
           }
         });
   }
 
-  public void sendResponse(byte[] frameData, int reward) {
-    // Non-blocking: just add to queue
-    FrameData frame = new FrameData(frameData, reward);
-
-    // Drop oldest frames if queue is getting too full (backpressure handling)
-    while (frameQueue.size() > 10) {
-      FrameData dropped = frameQueue.poll();
-      if (dropped != null) {
-        LOGGER.debug(
-            "Dropped frame due to backpressure (age: {}ms)",
-            System.currentTimeMillis() - dropped.timestamp);
-      }
-    }
-
-    LOGGER.info("Adding frame to queue");
-    frameQueue.offer(frame);
+  public void setLatest(byte[] frameBuffer, int reward) {
+    Observation observation = new Observation(frameBuffer, reward);
+    latestObservation.set(observation);
+    frameAvailable.drainPermits();
+    frameAvailable.release();
   }
 
-  private void sendFrameImmediate(FrameData frameData, SocketChannel clientSocket) {
-    LOGGER.info("Sending frame");
+  private void sendObservationImmediate(Observation observation, SocketChannel clientSocket) {
+    LOGGER.info("Sending observation to client");
     try {
-      ByteBuffer buffer = ByteBuffer.allocate(8 + frameData.data.length);
-      buffer.putInt(frameData.reward);
-      buffer.putInt(frameData.data.length);
-      buffer.put(frameData.data);
+      int totalSize = 8 + observation.frameBuffer.length;
+      ByteBuffer buffer = ByteBuffer.allocate(totalSize);
+      buffer.putInt(observation.reward);
+      buffer.putInt(observation.frameBuffer.length);
+      buffer.put(observation.frameBuffer);
       buffer.flip();
-      int bytesWritten = clientSocket.write(buffer);
-      LOGGER.info("Frame sent: {} bytes", bytesWritten);
-      if (bytesWritten != buffer.remaining()) {
-        LOGGER.error("Data size mismatch! Expected: {}, Actual: {}", buffer.remaining(), bytesWritten);
+      while (buffer.hasRemaining()) {
+        int bytesWritten = clientSocket.write(buffer);
+        LOGGER.info("Observation sent: {} bytes", bytesWritten);
       }
     } catch (IOException e) {
-      LOGGER.error("Error sending frame", e);
+      LOGGER.error("Error sending observation", e);
     }
   }
 

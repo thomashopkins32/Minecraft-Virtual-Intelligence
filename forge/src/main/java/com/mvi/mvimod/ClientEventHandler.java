@@ -63,8 +63,8 @@ public class ClientEventHandler {
     int width = window.getWidth();
     int height = window.getHeight();
 
-    ByteBuffer buffer = ByteBuffer.allocateDirect(width * height * 4);
-    GL11.glReadPixels(0, 0, width, height, GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, buffer);
+    ByteBuffer buffer = ByteBuffer.allocateDirect(width * height * 3);
+    GL11.glReadPixels(0, 0, width, height, GL11.GL_RGB, GL11.GL_UNSIGNED_BYTE, buffer);
 
     byte[] bytes = new byte[buffer.capacity()];
     buffer.get(bytes);

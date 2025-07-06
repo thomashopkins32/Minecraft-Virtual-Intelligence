@@ -26,8 +26,8 @@ class ConnectionConfig:
     """Configuration for Minecraft Forge mod connection"""
     command_port: str = "/tmp/mvi_receive.sock"
     data_port: str = "/tmp/mvi_send.sock"
-    width: int = 1024
-    height: int = 768
+    width: int = 320
+    height: int = 240
     timeout: float = 30.0
     max_retries: int = 3
     retry_delay: float = 1.0
@@ -48,8 +48,6 @@ class MinecraftForgeClient:
         
         # Delta encoding state
         self.current_frame: np.ndarray | None = None
-        self.frame_width: int = 0
-        self.frame_height: int = 0
     
     def connect(self) -> bool:
         """
@@ -74,7 +72,6 @@ class MinecraftForgeClient:
                 # Performance optimizations for large data transfers
                 # Set large receive buffer (1MB) for better throughput
                 self.data_socket.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 1024 * 1024)
-                
                 self.data_socket.connect(self.config.data_port)
                 
                 self.connected = True
@@ -155,8 +152,6 @@ class MinecraftForgeClient:
             return None
         
         try:
-            assert self.data_socket is not None  # Type checker hint
-            
             # Fastest approach: receive header + data in one shot if possible
             # First get just the header to know the total size
             header_data = self.data_socket.recv(8, socket.MSG_WAITALL)
@@ -166,7 +161,6 @@ class MinecraftForgeClient:
             else:
                 self.logger.info("Received header: %s", len(header_data))
 
-            
             # Parse header
             reward = int.from_bytes(header_data[0:4], byteorder='big', signed=True)
             data_length = int.from_bytes(header_data[4:8], byteorder='big', signed=False)
@@ -178,7 +172,7 @@ class MinecraftForgeClient:
             # Receive all frame data in single call with MSG_WAITALL
             frame_data = self.data_socket.recv(data_length, socket.MSG_WAITALL)
             if len(frame_data) != data_length:
-                self.logger.error(f"Failed to receive complete frame data: expected {data_length}, got {len(frame_data)}")
+                self.logger.error("Failed to receive complete frame data, got %d bytes, expected %d bytes", len(frame_data), data_length)
                 return None
 
             # Parse frame data using delta encoding protocol
@@ -193,44 +187,6 @@ class MinecraftForgeClient:
             self.connected = False
             return None
     
-    def _receive_all_fallback(self, num_bytes: int) -> bytes | None:
-        """
-        Fallback method for systems that don't support MSG_WAITALL properly
-        Uses pre-allocated buffer and recv_into for maximum speed
-        
-        Parameters
-        ----------
-        num_bytes : int
-            Number of bytes to receive
-            
-        Returns
-        -------
-        bytes | None
-            Complete data if successful, None otherwise
-        """
-        assert self.data_socket is not None  # Type checker hint
-        
-        # Pre-allocate buffer to avoid repeated allocations
-        buffer = bytearray(num_bytes)
-        view = memoryview(buffer)
-        pos = 0
-        
-        while pos < num_bytes:
-            try:
-                # Use recv_into for zero-copy operation
-                chunk_size = self.data_socket.recv_into(view[pos:])
-                if chunk_size == 0:
-                    self.logger.error("Socket closed by remote host")
-                    return None
-                    
-                pos += chunk_size
-                
-            except socket.error as e:
-                self.logger.error(f"Socket error while receiving data: {e}")
-                return None
-        
-        return bytes(buffer)
-    
     def _parse_frame_data(self, frame_data: bytes) -> np.ndarray | None:
         """
         Parse frame data using delta encoding protocol
@@ -238,105 +194,14 @@ class MinecraftForgeClient:
         Parameters
         ----------
         frame_data : bytes
-            Raw frame data from UDP packet
+            Raw frame data from socket
             
         Returns
         -------
         np.ndarray | None
             Parsed frame as numpy array if successful, None otherwise
         """
-        try:
-            if len(frame_data) < 1:
-                return None
-            
-            packet_type = frame_data[0]
-            
-            if packet_type == 0:
-                # Full frame packet: [type:1][width:4][height:4][data_length:4][data...]
-                if len(frame_data) < 17:  # 1 + 4 + 4 + 4 + 4 minimum
-                    self.logger.error("Full frame packet too small")
-                    return None
-                
-                width = int.from_bytes(frame_data[1:5], byteorder='big')
-                height = int.from_bytes(frame_data[5:9], byteorder='big')
-                data_length = int.from_bytes(frame_data[9:13], byteorder='big')
-                
-                if len(frame_data) != 13 + data_length:
-                    self.logger.error("Full frame data length mismatch")
-                    return None
-                
-                raw_data = frame_data[13:13+data_length]
-                
-                # Convert RGBA to RGB (skip alpha channel)
-                if len(raw_data) == width * height * 4:
-                    frame_array = np.frombuffer(raw_data, dtype=np.uint8).reshape(height, width, 4)
-                    # Convert RGBA to RGB and flip Y axis (OpenGL to standard image coordinates)
-                    frame_array = np.flipud(frame_array[:, :, :3])
-                    
-                    # Store current frame for delta updates
-                    self.current_frame = frame_array.copy()
-                    self.frame_width = width
-                    self.frame_height = height
-                    
-                    return frame_array
-                else:
-                    self.logger.error(f"Invalid full frame data size: {len(raw_data)}, expected: {width * height * 4}")
-                    return None
-                    
-            elif packet_type == 1:
-                # Delta packet: [type:1][width:4][height:4][num_changes:4][changes...]
-                if len(frame_data) < 17:  # 1 + 4 + 4 + 4 + 4 minimum
-                    self.logger.error("Delta packet too small")
-                    return None
-                
-                width = int.from_bytes(frame_data[1:5], byteorder='big')
-                height = int.from_bytes(frame_data[5:9], byteorder='big')
-                num_changes = int.from_bytes(frame_data[9:13], byteorder='big')
-                
-                if self.current_frame is None or self.frame_width != width or self.frame_height != height:
-                    self.logger.warning("Delta packet received but no valid base frame")
-                    return None
-                
-                # Apply delta changes
-                changes_data = frame_data[13:]
-                expected_size = num_changes * 7  # 4 bytes index + 3 bytes RGB
-                
-                if len(changes_data) != expected_size:
-                    self.logger.error(f"Delta changes data size mismatch: {len(changes_data)}, expected: {expected_size}")
-                    return None
-                
-                # Create a copy of current frame to modify
-                updated_frame = self.current_frame.copy()
-                
-                for i in range(num_changes):
-                    offset = i * 7
-                    pixel_index = int.from_bytes(changes_data[offset:offset+4], byteorder='big')
-                    r = changes_data[offset+4]
-                    g = changes_data[offset+5]
-                    b = changes_data[offset+6]
-                    
-                    # Convert linear pixel index to y, x coordinates
-                    y = pixel_index // width
-                    x = pixel_index % width
-                    
-                    if 0 <= y < height and 0 <= x < width:
-                        # Apply Y-flip (OpenGL coordinates)
-                        flipped_y = height - 1 - y
-                        updated_frame[flipped_y, x] = [r, g, b]
-                
-                # Update stored frame
-                self.current_frame = updated_frame.copy()
-                
-                self.logger.debug(f"Applied {num_changes} delta changes")
-                return updated_frame
-                
-            else:
-                self.logger.error(f"Unknown packet type: {packet_type}")
-                return None
-                
-        except Exception as e:
-            self.logger.error(f"Failed to parse frame data: {e}")
-            return None
+        return np.flipud(np.frombuffer(frame_data, dtype=np.uint8).reshape(self.config.height, self.config.width, 3))
 
 
 class MinecraftEnv(gym.Env[np.ndarray, np.int64]):
@@ -402,7 +267,7 @@ class MinecraftEnv(gym.Env[np.ndarray, np.int64]):
         if self.current_frame is None:
             self.logger.warning("No frame data received")
             # Return a black frame if we can't get data
-            height, width = self.config.engine.image_size
+            height, width = self.connection_config.width, self.connection_config.height
             self.current_frame = np.zeros((height, width, 3), dtype=np.uint8)
         else:
             self.logger.info(f"Received frame data: {self.current_frame.shape}")

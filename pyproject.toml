@@ -50,6 +50,7 @@ dev = [
     "pytest-mock",
     "ruff",
     "types-PyYAML",
+    "matplotlib",
 ]
 
 [tool.pyright]
