@@ -30,8 +30,18 @@ public class ClientEventHandler {
 
   @SubscribeEvent
   public static void onClientTick(TickEvent.ClientTickEvent event) {
+    ArrayList<String> commands = dataBridge.emptyCommandQueue();
+    for (String command : commands) {
+      processCommand(command);
+
+    }
+
     if (event.phase == TickEvent.Phase.END) {
-      captureAndSendFrame();
+      // TODO: Move to data bridge?
+      int reward = packageReward();
+      ActionState actionState = captureActionState();
+      byte[] frame = captureFrame();
+      dataBridge.sendObservation(new Observation(reward, actionState, frame));
     }
   }
 
@@ -49,14 +59,22 @@ public class ClientEventHandler {
     }
   }
 
-  private static void captureAndSendFrame() {
+  private static int packageReward() {
+    // TODO: Get rewards from the reward queue
+    throw new UnsupportedOperationException("Not implemented");
+  }
+
+  private static ActionState captureActionState() {
+    // TODO: Get the state of every action the user can take
+    throw new UnsupportedOperationException("Not implemented");
+  }
+
+  private static byte[] captureFrame() {
     Minecraft mc = Minecraft.getInstance();
     if (mc.level != null && mc.player != null) {
-      LOGGER.info("Capturing screenshot");
-      byte[] frameData = captureScreenshot(mc.getWindow());
-      LOGGER.info("Sending frame data");
-      dataBridge.sendFrame(frameData);
+      return captureScreenshot(mc.getWindow());
     }
+    return null;
   }
 
   private static byte[] captureScreenshot(Window window) {

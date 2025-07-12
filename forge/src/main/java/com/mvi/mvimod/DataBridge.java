@@ -21,19 +21,10 @@ public class DataBridge {
     LOGGER.info("NetworkHandler connected to DataBridge");
   }
 
-  public void sendEvent(String eventType, String data) {
+  public void sendObservation(Observation obs) {
     if (networkHandler != null) {
-      LOGGER.info("Sending event: {} with data: {}", eventType, data);
-      // TODO: Implement this
-    } else {
-      LOGGER.warn("Cannot send event - NetworkHandler is null");
-    }
-  }
-
-  public void sendFrame(byte[] frameData) {
-    if (networkHandler != null) {
-      LOGGER.info("DataBridge sending frame data (size: {} bytes)", frameData.length);
-      networkHandler.setLatest(frameData, 0);
+      LOGGER.info("DataBridge sending frame data (size: {} bytes)", obs.frame().length);
+      networkHandler.setLatest(obs.frame(), obs.reward());
     } else {
       LOGGER.warn("Cannot send frame - NetworkHandler is null");
     }
