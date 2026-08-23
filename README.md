@@ -66,7 +66,7 @@ Or if you installed with conda or venv:
 mineagent
 ```
 
-This will start the project and you can use the `mineagent` command to run the project starting from the `engine.run` function.
+This will start the project from the `mineagent.run:run` function.
 
 To view a list of all the commands you can use, run `mineagent --help`.
 

@@ -102,6 +102,14 @@ public record ActionMessage(
         for (int i = 0; i < numRelease; i++) {
           keyRelease[i] = buffer.getShort();
         }
+        for (int p : keyPress) {
+          for (int r : keyRelease) {
+            if (p == r) {
+              throw new IllegalArgumentException(
+                  "key in both press and release lists: " + p);
+            }
+          }
+        }
       }
       if ((flags & FLAG_HAS_MOUSE) != 0) {
         mouseDx = buffer.getFloat();
@@ -110,8 +118,16 @@ public record ActionMessage(
       }
       if ((flags & FLAG_HAS_BUTTONS) != 0) {
         int b = buffer.get() & 0xFF;
+        if ((b & FLAG_MASK_RESERVED) != 0) {
+          throw new IllegalArgumentException(
+              "Reserved button bits set: " + Integer.toHexString(b));
+        }
         buttonPress = b & 0x7;
         buttonRelease = (b >> 3) & 0x7;
+        if ((buttonPress & buttonRelease) != 0) {
+          throw new IllegalArgumentException(
+              "a button may not be in both press and release nibbles");
+        }
         hasButtons = true;
       }
       if ((flags & FLAG_HAS_SCROLL) != 0) {

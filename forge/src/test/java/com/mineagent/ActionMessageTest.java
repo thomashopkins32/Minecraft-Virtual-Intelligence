@@ -218,4 +218,24 @@ class ActionMessageTest {
     assertEquals(ActionMessage.MSG_TYPE_RESET, ActionMessage.reset().msgType());
     assertEquals(ActionMessage.MSG_TYPE_PING, ActionMessage.ping().msgType());
   }
+
+  @Test
+  void fromBytes_rejectsReservedButtonBits() {
+    byte[] data =
+        new byte[] {
+          (byte) (ActionMessage.MSG_TYPE_ACTION | ActionMessage.FLAG_HAS_BUTTONS), (byte) 0x40
+        };
+    assertThrows(IllegalArgumentException.class, () -> ActionMessage.fromBytes(data));
+  }
+
+  @Test
+  void fromBytes_rejectsOverlappingKeys() {
+    ByteBuffer buf = ByteBuffer.allocate(7).order(ByteOrder.BIG_ENDIAN);
+    buf.put((byte) (ActionMessage.MSG_TYPE_ACTION | ActionMessage.FLAG_HAS_KEYS));
+    buf.put((byte) 1); // numPress
+    buf.put((byte) 1); // numRelease
+    buf.putShort((short) KEY_W);
+    buf.putShort((short) KEY_W);
+    assertThrows(IllegalArgumentException.class, () -> ActionMessage.fromBytes(buf.array()));
+  }
 }

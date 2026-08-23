@@ -54,3 +54,22 @@ def test_agent_v1_params(agent_v1_module: AgentV1):
     ]
     num_params = sum(sum(p.numel() for p in m.parameters()) for m in modules)
     assert num_params > 0
+
+
+def test_act_runs_ppo_and_icm_when_buffer_full() -> None:
+    """Regression: batch-1 tensors used to make PPO/ICM update crash on dim mismatch."""
+    torch.manual_seed(0)
+    agent = AgentV1(
+        AgentConfig(
+            ppo=PPOConfig(train_actor_iters=2, train_critic_iters=2),
+            icm=ICMConfig(
+                train_forward_dynamics_iters=2, train_inverse_dynamics_iters=2
+            ),
+            td=TDConfig(),
+            max_buffer_size=4,
+        ),
+    )
+    obs = torch.randn((1, 3, 160, 256))
+    for i in range(4):
+        agent.act(obs, reward=float(i))
+    assert len(agent.memory) == 4

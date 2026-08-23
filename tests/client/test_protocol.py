@@ -12,6 +12,7 @@ from mineagent.client.protocol import (
     MSG_TYPE_PING,
     MSG_TYPE_RESET,
     MSG_TYPE_TEXT,
+    FLAG_HAS_BUTTONS,
     held_state_diff,
     parse_observation,
 )
@@ -119,9 +120,7 @@ def test_too_many_release_keys():
 
 def test_key_in_both_lists_rejected():
     with pytest.raises(ValueError, match="both press and release"):
-        ActionMessage(
-            key_press=[GLFW.KEY_W], key_release=[GLFW.KEY_W]
-        ).to_bytes()
+        ActionMessage(key_press=[GLFW.KEY_W], key_release=[GLFW.KEY_W]).to_bytes()
 
 
 def test_button_in_both_nibbles_rejected():
@@ -182,8 +181,14 @@ def test_round_trip_pure_hold():
 
 
 def test_round_trip_reset_and_ping():
-    assert ActionMessage.from_bytes(ActionMessage.reset().to_bytes()).msg_type == MSG_TYPE_RESET
-    assert ActionMessage.from_bytes(ActionMessage.ping().to_bytes()).msg_type == MSG_TYPE_PING
+    assert (
+        ActionMessage.from_bytes(ActionMessage.reset().to_bytes()).msg_type
+        == MSG_TYPE_RESET
+    )
+    assert (
+        ActionMessage.from_bytes(ActionMessage.ping().to_bytes()).msg_type
+        == MSG_TYPE_PING
+    )
 
 
 def test_round_trip_text_unicode():
@@ -197,7 +202,18 @@ def test_round_trip_text_unicode():
 
 def test_from_bytes_rejects_reserved_bits():
     with pytest.raises(ValueError, match="Reserved flag bits set"):
-        ActionMessage.from_bytes(b"\xC0")
+        ActionMessage.from_bytes(b"\xc0")
+
+
+def test_from_bytes_rejects_reserved_button_bits():
+    flags = MSG_TYPE_ACTION | FLAG_HAS_BUTTONS
+    with pytest.raises(ValueError, match="Reserved button bits set"):
+        ActionMessage.from_bytes(bytes([flags, 0x40]))
+
+
+def test_empty_text_rejected():
+    with pytest.raises(ValueError, match="must not be empty"):
+        ActionMessage(msg_type=MSG_TYPE_TEXT, text="").to_bytes()
 
 
 def test_from_bytes_rejects_trailing_bytes():

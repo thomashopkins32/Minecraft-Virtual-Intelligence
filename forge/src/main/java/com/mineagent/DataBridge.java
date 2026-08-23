@@ -6,8 +6,8 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.slf4j.Logger;
 
 /**
- * Central bridge for data exchange between network handler and game events. Manages the latest raw
- * input, observations, and connection state.
+ * Central bridge for data exchange between network handler and game events. Manages the latest
+ * action message, observations, and connection state.
  */
 public class DataBridge {
   private static final Logger LOGGER = LogUtils.getLogger();

@@ -1,6 +1,25 @@
 from collections import deque
+from typing import Any
 
 import torch
+
+
+def _squeeze_leading_batch(t: torch.Tensor) -> torch.Tensor:
+    """Drop a leading singleton batch dim so PPO/ICM stack to ``(T, ...)``.
+
+    ``AgentV1.act`` runs with batch size 1, so tensors arrive as ``(1, D)``.
+    Learning code (and the unit tests) expect per-step vectors of rank 1.
+    """
+    t = t.detach()
+    if t.dim() >= 1 and t.shape[0] == 1:
+        t = t.squeeze(0)
+    return t
+
+
+def _as_float(value: Any) -> float:
+    if isinstance(value, torch.Tensor):
+        return float(value.detach().reshape(-1)[0].item())
+    return float(value)
 
 
 class TrajectoryBuffer:
@@ -67,13 +86,13 @@ class TrajectoryBuffer:
         focus_logp : torch.Tensor | None
             Log probability of the focus coordinates
         """
-        self.features_buffer.append(visual_features)
-        self.actions_buffer.append(action)
-        self.rewards_buffer.append(reward)
-        self.intrinsic_rewards_buffer.append(intrinsic_reward)
-        self.values_buffer.append(value)
-        self.log_probs_buffer.append(log_prob)
+        self.features_buffer.append(_squeeze_leading_batch(visual_features))
+        self.actions_buffer.append(_squeeze_leading_batch(action))
+        self.rewards_buffer.append(_as_float(reward))
+        self.intrinsic_rewards_buffer.append(_as_float(intrinsic_reward))
+        self.values_buffer.append(_as_float(value))
+        self.log_probs_buffer.append(_squeeze_leading_batch(log_prob))
         if focus is not None:
-            self.focus_buffer.append(focus)
+            self.focus_buffer.append(_squeeze_leading_batch(focus))
         if focus_logp is not None:
-            self.focus_logp_buffer.append(focus_logp)
+            self.focus_logp_buffer.append(_squeeze_leading_batch(focus_logp))

@@ -7,7 +7,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 
-from mineagent.utils import joint_logp_action, discount_cumsum
+from mineagent.utils import joint_logp_action, discount_cumsum, minibatch_size
 from mineagent.config import PPOConfig
 from mineagent.memory.trajectory import TrajectoryBuffer
 
@@ -160,7 +160,8 @@ class PPO:
         self.actor.train()
         buffer_size = len(data)
         for sample in data.get(
-            shuffle=True, batch_size=buffer_size // self.train_actor_iters
+            shuffle=True,
+            batch_size=minibatch_size(buffer_size, self.train_actor_iters),
         ):
             self.actor_optim.zero_grad()
             loss, kl = self._compute_actor_loss(sample)
@@ -183,7 +184,8 @@ class PPO:
         self.critic.train()
         buffer_size = len(data)
         for sample in data.get(
-            shuffle=True, batch_size=buffer_size // self.train_critic_iters
+            shuffle=True,
+            batch_size=minibatch_size(buffer_size, self.train_critic_iters),
         ):
             self.critic_optim.zero_grad()
             loss = self._compute_critic_loss(sample)

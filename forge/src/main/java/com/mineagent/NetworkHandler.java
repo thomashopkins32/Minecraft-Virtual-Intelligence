@@ -237,11 +237,11 @@ public class NetworkHandler implements Runnable {
               LOGGER.error("Error handling action client", e);
             }
           } finally {
-            // Mark client as disconnected
+            // Queue RESET for the tick thread. Do not call InputInjector.reset()
+            // here: this callback runs on a network thread, and GLFW input
+            // must be applied on the client thread.
             DataBridge.getInstance().setClientConnected(false);
-
-            // Reset input state on disconnect
-            DataBridge.getInstance().getInputInjector().reset();
+            DataBridge.getInstance().setLatestAction(ActionMessage.reset());
 
             try {
               clientSocket.close();

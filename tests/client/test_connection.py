@@ -49,10 +49,11 @@ async def _connect_client(client: AsyncMinecraftClient):
     """Patch open_unix_connection and connect, returning the mock reader/writer."""
     reader = _make_mock_reader()
     writer = _make_mock_writer()
+    unused_writer = _make_mock_writer()
 
     async def fake_open(path):
         if path == client.config.observation_socket:
-            return (reader, MagicMock())
+            return (reader, unused_writer)
         return (MagicMock(), writer)
 
     with patch(
@@ -61,7 +62,7 @@ async def _connect_client(client: AsyncMinecraftClient):
     ):
         result = await client.connect()
 
-    assert result is True
+    assert result is None
     return reader, writer
 
 
@@ -72,7 +73,7 @@ async def test_connect_success(client):
 
     async def fake_open(path):
         if path == client.config.observation_socket:
-            return (reader, MagicMock())
+            return (reader, _make_mock_writer())
         return (MagicMock(), writer)
 
     with patch(
@@ -81,28 +82,29 @@ async def test_connect_success(client):
     ):
         result = await client.connect()
 
-    assert result is True
+    assert result is None
     assert client.connected is True
 
 
 @pytest.mark.asyncio
 async def test_connect_failure_retries(client):
     call_count = 0
+    client.config.timeout = 0.0
 
     async def fake_open(path):
         nonlocal call_count
         call_count += 1
-        raise OSError("Connection refused")
+        raise ConnectionRefusedError("Connection refused")
 
     with patch(
         "mineagent.client.connection.asyncio.open_unix_connection",
         side_effect=fake_open,
     ):
-        result = await client.connect()
+        with pytest.raises(TimeoutError, match="Timed out waiting for socket"):
+            await client.connect()
 
-    assert result is False
     assert client.connected is False
-    assert call_count == client.config.max_retries
+    assert call_count >= 1
 
 
 @pytest.mark.asyncio

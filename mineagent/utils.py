@@ -106,6 +106,15 @@ def statistics(x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
     return torch.mean(x), torch.std(x)
 
 
+def minibatch_size(n: int, n_iters: int) -> int:
+    """Minibatch size that yields about ``n_iters`` batches over ``n`` samples.
+
+    Floor is 1 so ``n < n_iters`` cannot produce a 0-sized batch (which would
+    infinite-loop ``PPOSample.get`` / ``ICMSample.get``).
+    """
+    return max(1, n // max(1, n_iters))
+
+
 def sample_action(
     output: AffectorOutput,
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:

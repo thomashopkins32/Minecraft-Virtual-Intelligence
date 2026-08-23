@@ -335,21 +335,15 @@ class ActionMessage:
         if self.msg_type & ~0x3:
             raise ValueError(f"msg_type must fit in 2 bits, got {self.msg_type}")
         if self.button_press & ~0x7:
-            raise ValueError(
-                f"button_press must be 3 bits, got {self.button_press}"
-            )
+            raise ValueError(f"button_press must be 3 bits, got {self.button_press}")
         if self.button_release & ~0x7:
             raise ValueError(
                 f"button_release must be 3 bits, got {self.button_release}"
             )
         if self.button_press & self.button_release:
-            raise ValueError(
-                "a button may not be in both press and release nibbles"
-            )
+            raise ValueError("a button may not be in both press and release nibbles")
         if len(self.key_press) > 255:
-            raise ValueError(
-                f"Too many press keys: {len(self.key_press)} (max 255)"
-            )
+            raise ValueError(f"Too many press keys: {len(self.key_press)} (max 255)")
         if len(self.key_release) > 255:
             raise ValueError(
                 f"Too many release keys: {len(self.key_release)} (max 255)"
@@ -363,10 +357,10 @@ class ActionMessage:
             )
         if self.msg_type == MSG_TYPE_TEXT:
             text_bytes = self.text.encode("utf-8")
+            if not text_bytes:
+                raise ValueError("TEXT message must not be empty")
             if len(text_bytes) > 65535:
-                raise ValueError(
-                    f"Text too long: {len(text_bytes)} bytes (max 65535)"
-                )
+                raise ValueError(f"Text too long: {len(text_bytes)} bytes (max 65535)")
 
     def to_bytes(self) -> bytes:
         """Serialize to the v2 wire format."""
@@ -400,8 +394,7 @@ class ActionMessage:
                 data.extend(struct.pack(">f", self.mouse_dy))
             if flags & FLAG_HAS_BUTTONS:
                 data.append(
-                    (self.button_press & 0x7)
-                    | ((self.button_release & 0x7) << 3)
+                    (self.button_press & 0x7) | ((self.button_release & 0x7) << 3)
                 )
             if flags & FLAG_HAS_SCROLL:
                 data.extend(struct.pack(">f", self.scroll))
@@ -440,9 +433,7 @@ class ActionMessage:
             if flags & FLAG_HAS_KEYS:
                 num_press, num_release = data[cur], data[cur + 1]
                 cur += 2
-                msg.key_press = list(
-                    struct.unpack_from(f">{num_press}h", data, cur)
-                )
+                msg.key_press = list(struct.unpack_from(f">{num_press}h", data, cur))
                 cur += num_press * 2
                 msg.key_release = list(
                     struct.unpack_from(f">{num_release}h", data, cur)
@@ -455,6 +446,8 @@ class ActionMessage:
             if flags & FLAG_HAS_BUTTONS:
                 byte = data[cur]
                 cur += 1
+                if byte & FLAG_MASK_RESERVED:
+                    raise ValueError(f"Reserved button bits set: {byte:#04x}")
                 msg.button_press = byte & 0x7
                 msg.button_release = (byte >> 3) & 0x7
                 msg.has_buttons = True
@@ -470,9 +463,8 @@ class ActionMessage:
         # RESET / PING: no body.
 
         if cur != len(data):
-            raise ValueError(
-                f"Trailing bytes: consumed {cur} of {len(data)}"
-            )
+            raise ValueError(f"Trailing bytes: consumed {cur} of {len(data)}")
+        msg._validate()
         return msg
 
 

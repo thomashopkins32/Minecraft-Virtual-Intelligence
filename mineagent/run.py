@@ -81,4 +81,4 @@ def debug() -> None:
 
 
 if __name__ == "__main__":
-    debug()
+    run()

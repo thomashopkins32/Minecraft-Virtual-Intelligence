@@ -20,12 +20,14 @@ Changing paths requires updating **both** sides (or making Java read the same co
 
 ## Implementation status
 
-The action protocol below is the **target (v2) event-based spec**. The current
-code still ships the legacy absolute-state `RawInput` format (see
-`mineagent/client/protocol.py` `RawInput.to_bytes` and Java
-`NetworkHandler.handleActionClient`). During migration, both sides must agree on
-which format is in use; do not mix them on a socket. The observation format is
-unchanged in this revision.
+v2 event-based `ActionMessage` is the **implemented** action protocol on both
+Python (`mineagent/client/protocol.py`) and Java (`ActionMessage`,
+`NetworkHandler`, `InputInjector`). The legacy absolute-state `RawInput` format
+has been removed. Observation framing is unchanged.
+
+The Gymnasium action space remains **absolute held-state**; `MinecraftEnv`
+owns the held-state register and diffs it into PRESS/RELEASE edges before
+serializing an `ActionMessage`.
 
 ## Observation wire format
 
@@ -165,25 +167,14 @@ once observation status flags are added.
 - **Focus / ROI** is **not** sent on the wire; it is internal to `AgentV1` /
   perception (see `mineagent-python` skill).
 
-## Legacy action format (pre-v2, still in code)
+## Legacy action format (pre-v2, removed)
 
-Documented for parity during migration. **Python** `RawInput.to_bytes()`:
-
-1. `uint8` number of pressed keys `N`
-2. `N` × big-endian `int16` key codes
-3. `float32` `mouse_dx`
-4. `float32` `mouse_dy`
-5. `uint8` `mouse_buttons` (bit flags: `0=left, 1=right, 2=middle`)
-6. `float32` `scroll_delta`
-7. `uint16` text UTF-8 length
-8. text bytes (UTF-8), may be empty
-
-This is **absolute-state**: every key/button bit is either "down" or "up", so
-`mouse_buttons=0` means *release all*, not *do nothing*. There is no HOLD
-sentinel — holding requires re-sending the same state each tick. Java derives
-PRESS/RELEASE by diffing against `previouslyPressedKeys` /
-`previousMouseButtons` in `InputInjector`. The v2 format replaces this diffing
-with explicit edges and a real HOLD.
+The previous absolute-state `RawInput` snapshot format is **gone**. Do not mix
+it with v2 on a socket. Historical notes: every key/button bit was down or up
+(`mouse_buttons=0` meant *release all*), Java derived PRESS/RELEASE by
+diffing `previouslyPressedKeys` / `previousMouseButtons`, and holding required
+re-sending the same snapshot each tick. v2 replaces that with explicit edges
+and HOLD.
 
 ## Parity checklist (when editing protocol)
 

@@ -42,7 +42,7 @@ public class ClientEventHandler {
     LOGGER.info("MineAgent Mod Server Stopping");
   }
 
-  /** Main game tick handler. Processes raw input and captures observations. */
+  /** Main game tick handler. Processes pending action messages and captures observations. */
   @SubscribeEvent
   public static void onClientTick(TickEvent.ClientTickEvent event) {
     if (event.phase != TickEvent.Phase.END) {

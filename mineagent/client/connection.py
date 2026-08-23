@@ -139,9 +139,12 @@ class AsyncMinecraftClient:
 
         try:
             header = await self._observation_reader.readexactly(12)
-        except asyncio.IncompleteReadError:
+        except asyncio.IncompleteReadError as e:
             self._connected = False
-            raise
+            raise ConnectionError(
+                f"Connection lost while reading header: "
+                f"got {len(e.partial)} of 12 bytes"
+            ) from e
 
         reward = struct.unpack(">d", header[0:8])[0]
         frame_length = struct.unpack(">I", header[8:12])[0]
@@ -170,9 +173,12 @@ class AsyncMinecraftClient:
 
         try:
             frame_data = await self._observation_reader.readexactly(frame_length)
-        except asyncio.IncompleteReadError:
+        except asyncio.IncompleteReadError as e:
             self._connected = False
-            raise
+            raise ConnectionError(
+                f"Connection lost while reading frame data: "
+                f"got {len(e.partial)} of {frame_length} bytes"
+            ) from e
 
         try:
             return parse_observation(

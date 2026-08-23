@@ -13,7 +13,7 @@ description: >-
 
 | Area | Path | Notes |
 |------|------|--------|
-| Run loop | `mineagent/engine.py` | Builds `Config`, `MinecraftEnv`, `AgentV1`; publishes monitoring events |
+| Run loop | `mineagent/run.py` | Builds `Config`, `MinecraftEnv`, `AgentV1` |
 | Env | `mineagent/env.py` | `MinecraftEnv` (`gymnasium.Env`), sync wrapper over `AsyncMinecraftClient` |
 | Config | `mineagent/config.py` | Dataclasses + YAML via dacite; CLI `-f` / `-kvp` |
 | Agent | `mineagent/agent/agent.py` | `AgentV1`: vision → affector → critic; PPO + ICM updates |
@@ -23,16 +23,15 @@ description: >-
 | Dynamics | `mineagent/reasoning/dynamics.py` | `InverseDynamics`, `ForwardDynamics` (ICM) |
 | Learning | `mineagent/learning/ppo.py`, `icm.py`, `td.py` | PPO (Spinning Up–style), ICM; TD helper exists |
 | Memory | `mineagent/memory/trajectory.py` | `TrajectoryBuffer` (fixed maxlen) |
-| Client | `mineagent/client/` | Async UDS client, `protocol` (action space, `RawInput`) |
-| Monitoring | `mineagent/monitoring/` | Event bus, TensorBoard callbacks |
-| Utils | `mineagent/utils.py` | `sample_action`, `joint_logp_action`, hooks, tensorboard setup |
+| Client | `mineagent/client/` | Async UDS client, `protocol` (`ActionMessage` v2) |
+| Utils | `mineagent/utils.py` | `sample_action`, `joint_logp_action` |
 
 ## Engine loop (mental model)
 
 1. `get_config()` loads YAML and/or CLI overrides.
 2. `MinecraftEnv` connects on reset; observations are `uint8` HWC RGB.
 3. Each step: `agent.act(obs_tensor)` returns a **dict** action (keys, mouse deltas, buttons, scroll) for `env.step`.
-4. Monitoring: `event_bus` + optional TensorBoard writers.
+4. When the trajectory buffer fills, `AgentV1` runs PPO and ICM updates.
 
 ## AgentV1 (important semantics)
 

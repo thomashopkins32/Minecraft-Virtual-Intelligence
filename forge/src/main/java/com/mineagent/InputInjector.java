@@ -284,6 +284,11 @@ public class InputInjector {
     heldMouseButtons = 0;
     mouseInitialized = false;
 
+    if (mc != null && mc.options != null) {
+      mc.options.keyAttack.setDown(false);
+      mc.options.keyUse.setDown(false);
+    }
+
     LOGGER.info("InputInjector reset");
   }
 
