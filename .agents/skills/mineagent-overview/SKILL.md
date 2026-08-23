@@ -19,13 +19,13 @@ The project is **early-stage** (see `README.md`). The near-term research directi
 
 | Path | Role |
 |------|------|
-| `mineagent/` | Python package: Gymnasium env, RL agent, learning (PPO, ICM), monitoring, client |
+| `mineagent/` | Python package: Gymnasium env, RL agent, learning (PPO, ICM), client |
 | `forge/` | Minecraft **Forge** mod (Java): frames, rewards, input injection, Unix-socket servers |
 | `config_templates/config.yaml` | Example YAML for `mineagent` CLI (`-f`) |
 | `tests/` | Pytest suite mirroring package structure |
 | `.github/workflows/` | CI: pytest (Pixi dev env), Gradle build, pre-commit |
 
-Entrypoint for running the loop: **`mineagent.engine:run`** (invoked as `pixi run mineagent` or the `mineagent` CLI when the package is on `PATH`; task defined in `pixi.toml`).
+Entrypoint for the loop: **`mineagent.run:run`** (invoked as `pixi run mineagent` or the `mineagent` CLI when the package is on `PATH`; task defined in `pixi.toml`).
 
 ## Runtime shape (one sentence)
 

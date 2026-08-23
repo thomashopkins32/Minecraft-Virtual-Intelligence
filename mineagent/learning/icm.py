@@ -9,6 +9,7 @@ import torch.optim as optim
 
 from mineagent.memory.trajectory import TrajectoryBuffer
 from mineagent.config import ICMConfig
+from mineagent.utils import minibatch_size
 
 
 @dataclass
@@ -178,7 +179,9 @@ class ICM:
         buffer_size = len(data)
         for sample in data.get(
             shuffle=True,
-            batch_size=buffer_size // self.config.train_inverse_dynamics_iters,
+            batch_size=minibatch_size(
+                buffer_size, self.config.train_inverse_dynamics_iters
+            ),
         ):
             self.inverse_dynamics_optimizer.zero_grad()
             loss = self._compute_inverse_dynamics_loss(sample)
@@ -200,7 +203,9 @@ class ICM:
         buffer_size = len(data)
         for sample in data.get(
             shuffle=True,
-            batch_size=buffer_size // self.config.train_forward_dynamics_iters,
+            batch_size=minibatch_size(
+                buffer_size, self.config.train_forward_dynamics_iters
+            ),
         ):
             self.forward_dynamics_optimizer.zero_grad()
             loss = self._compute_forward_dynamics_loss(sample)

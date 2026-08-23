@@ -17,6 +17,4 @@ jobs:
       - uses: prefix-dev/setup-pixi@v0.9.4
 
       - name: Build with Gradle
-        run: |
-          cd forge
-          pixi run gradle-build
+        run: pixi run gradle-build

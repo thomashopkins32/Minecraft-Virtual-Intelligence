@@ -6,8 +6,8 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.slf4j.Logger;
 
 /**
- * Central bridge for data exchange between network handler and game events. Manages the latest raw
- * input, observations, and connection state.
+ * Central bridge for data exchange between network handler and game events. Manages the latest
+ * action message, observations, and connection state.
  */
 public class DataBridge {
   private static final Logger LOGGER = LogUtils.getLogger();
@@ -16,7 +16,7 @@ public class DataBridge {
   private NetworkHandler networkHandler;
 
   // Raw input handling
-  private final AtomicReference<RawInput> latestRawInput = new AtomicReference<>();
+  private final AtomicReference<ActionMessage> latestAction = new AtomicReference<>();
 
   // Input injection
   private final InputInjector inputInjector = new InputInjector();
@@ -51,18 +51,22 @@ public class DataBridge {
     }
   }
 
-  /** Sets the latest raw input received from the Python agent. */
-  public void setLatestRawInput(RawInput rawInput) {
-    latestRawInput.set(rawInput);
+  /** Sets the latest action message received from the Python agent. */
+  public void setLatestAction(ActionMessage message) {
+    latestAction.set(message);
   }
 
-  /** Gets and clears the latest raw input. Returns null if no new input is available. */
-  public RawInput getLatestRawInput() {
-    RawInput rawInput = latestRawInput.getAndSet(null);
-    if (rawInput != null) {
-      LOGGER.debug("DataBridge getting latest raw input: {} keys", rawInput.keyCodes().length);
+  /** Gets and clears the latest action message. Returns null if no new input is available. */
+  public ActionMessage getLatestAction() {
+    ActionMessage message = latestAction.getAndSet(null);
+    if (message != null) {
+      LOGGER.debug(
+          "DataBridge getting latest action: type={}, press={}, release={}",
+          message.msgType(),
+          message.keyPress().length,
+          message.keyRelease().length);
     }
-    return rawInput;
+    return message;
   }
 
   /** Gets the input injector for injecting raw input into Minecraft. */

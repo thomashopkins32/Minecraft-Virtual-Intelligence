@@ -37,16 +37,16 @@ Defined in `forge/gradle.properties` (authoritative for the template):
 |-------|------|
 | `MineAgentMod` | `@Mod` entry; registers client setup, `Config`, `ClientEventHandler`; starts `NetworkHandler` on client |
 | `NetworkHandler` | Unix domain socket **servers** for observation stream + action stream; threads / executors |
-| `DataBridge` | Singleton between network thread and game: latest `RawInput`, `InputInjector`, “client connected” flag |
+| `DataBridge` | Singleton between network thread and game: latest `ActionMessage`, `InputInjector`, “client connected” flag |
 | `InputInjector` | Applies agent input to the game (see class for MC integration) |
-| `RawInput` | Java record mirroring wire protocol (keys, mouse, buttons, scroll, text) |
+| `ActionMessage` | Java record for the v2 event-based wire protocol (PRESS/RELEASE/HOLD, RESET, TEXT, PING) |
 | `Observation` | Frame + reward passed toward network layer |
 | `ClientEventHandler` | Client tick / render hooks (capture path lives here) |
 | `Config` | Forge config spec (e.g. window dimensions; note log strings in `MineAgentMod` still mention TCP/UDP in places—**sockets are Unix domain**; trust `NetworkHandler` + Python `ConnectionConfig`) |
 
 ## Tests
 
-JUnit under `forge/src/test/java/` (e.g. `RawInputTest`, `DataBridgeTest`).
+JUnit under `forge/src/test/java/` (e.g. `ActionMessageTest`, `DataBridgeTest`).
 
 ## When changing the mod
 

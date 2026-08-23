@@ -11,7 +11,7 @@ repos:
       - id: ruff
         name: lint with ruff
         language: system
-        entry: ruff check
+        entry: ruff check --fix
         types: [python]
         require_serial: true
 
@@ -25,7 +25,7 @@ repos:
       - id: spotlessApply
         name: format with spotless
         language: system
-        entry: bash -c 'cd forge && gradle :spotlessApply'
+        entry: bash -c 'mkdir -p /tmp/gradle-tmp /tmp/gradle-home && export TMPDIR=/tmp/gradle-tmp GRADLE_USER_HOME=/tmp/gradle-home && cd forge && gradle :spotlessApply'
         pass_filenames: false
         types: [java]
 
@@ -35,15 +35,3 @@ repos:
         entry: pyright
         types: [python]
         require_serial: true
-
-
-#  # Java hooks
-#  - repo: https://github.com/gherynos/pre-commit-java
-#    rev: v0.6.17
-#    hooks:
-#      - id: pmd
-#        files: forge/.*\.java$
-#      - id: cpd
-#        files: forge/.*\.java$
-#      - id: checkstyle
-#        files: forge/.*\.java$

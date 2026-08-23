@@ -42,7 +42,7 @@ public class ClientEventHandler {
     LOGGER.info("MineAgent Mod Server Stopping");
   }
 
-  /** Main game tick handler. Processes raw input and captures observations. */
+  /** Main game tick handler. Processes pending action messages and captures observations. */
   @SubscribeEvent
   public static void onClientTick(TickEvent.ClientTickEvent event) {
     if (event.phase != TickEvent.Phase.END) {
@@ -56,6 +56,21 @@ public class ClientEventHandler {
     boolean onPauseScreen = mc.screen instanceof PauseScreen;
     boolean isMenu = mc.screen != null;
     boolean inWorldWithOverlay = mc.level != null && mc.screen != null;
+
+    // Check and set window size
+    Window window = mc.getWindow();
+    int targetW = Config.WINDOW_WIDTH.get();
+    int targetH = Config.WINDOW_HEIGHT.get();
+    if (window.getWidth() != targetW || window.getHeight() != targetH) {
+      LOGGER.debug(
+          "Mismatched window size. Target WxH: {}x{}. Active WxH: {}x{}",
+          targetW,
+          targetH,
+          window.getWidth(),
+          window.getHeight());
+      window.setWindowed(targetW, targetH);
+      return;
+    }
 
     if (onTitleScreen || onAccessibilityScreen) {
       String worldName = Config.WORLD_NAME.get();
@@ -93,14 +108,17 @@ public class ClientEventHandler {
       return;
     }
 
-    enforceWindowSize(mc);
-
     handleInputSuppression(mc);
 
-    // Process any pending raw input
-    final RawInput rawInput = dataBridge.getLatestRawInput();
-    if (rawInput != null) {
-      dataBridge.getInputInjector().inject(rawInput);
+    // Process any pending action message.
+    final ActionMessage message = dataBridge.getLatestAction();
+    if (message != null) {
+      if (message.msgType() == ActionMessage.MSG_TYPE_RESET) {
+        // RESET: clear all held key/button state on the tick thread.
+        dataBridge.getInputInjector().reset();
+      } else {
+        dataBridge.getInputInjector().inject(message);
+      }
     }
 
     // IMPORTANT: Maintain button state every tick for continuous actions
@@ -162,15 +180,6 @@ public class ClientEventHandler {
   /** The player the agent controls on this machine (not other players or mobs). */
   private static boolean isClientControlledPlayer(LivingEntity entity) {
     return entity instanceof LocalPlayer p && p == Minecraft.getInstance().player;
-  }
-
-  private static void enforceWindowSize(Minecraft mc) {
-    Window window = mc.getWindow();
-    int targetW = Config.WINDOW_WIDTH.get();
-    int targetH = Config.WINDOW_HEIGHT.get();
-    if (window.getWidth() != targetW || window.getHeight() != targetH) {
-      window.setWindowed(targetW, targetH);
-    }
   }
 
   private static byte[] captureFrame() {
