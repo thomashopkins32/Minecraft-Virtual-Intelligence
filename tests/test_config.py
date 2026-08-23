@@ -75,6 +75,8 @@ def test_parse_config():
     )
     assert config.engine.image_size == tuple(config_dict["engine"]["image_size"])
     assert config.engine.max_steps == config_dict["engine"]["max_steps"]
+    assert config.engine.headless is False
+    assert config.engine.software_gl is False
     assert config.agent.roi_shape == tuple(config_dict["agent"]["roi_shape"])
     assert config.agent.max_buffer_size == config_dict["agent"]["max_buffer_size"]
     assert config.agent.ppo.actor_lr == config_dict["agent"]["ppo"]["actor_lr"]
@@ -124,3 +126,9 @@ def test_update_config():
     to_update = ["Test1"]
     with pytest.raises(ValueError) as _:
         update_config(config, to_update)
+
+
+def test_update_config_engine_headless():
+    config = parse_config(CONFIG_PATH)
+    update_config(config, ["engine.headless=true"])
+    assert config.engine.headless is True

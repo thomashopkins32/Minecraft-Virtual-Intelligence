@@ -1,4 +1,7 @@
 import asyncio
+import os
+import shutil
+import sys
 from dataclasses import dataclass
 from typing import Any
 from pathlib import Path
@@ -23,6 +26,46 @@ class MinecraftEnvConfig:
 
     frame_width: int = 320
     frame_height: int = 240
+    headless: bool = False
+    software_gl: bool = False
+
+
+XVFB_SCREEN_ARGS = "-screen 0 1920x1080x24"
+
+
+def minecraft_launch_argv(*, headless: bool) -> list[str]:
+    cmd = ["gradle", "runClient"]
+    if not headless:
+        return cmd
+    return ["xvfb-run", "-a", "-s", XVFB_SCREEN_ARGS, *cmd]
+
+
+def minecraft_launch_env(*, software_gl: bool) -> dict[str, str]:
+    env = os.environ.copy()
+    if software_gl:
+        env["LIBGL_ALWAYS_SOFTWARE"] = "1"
+    return env
+
+
+def validate_minecraft_launch(*, headless: bool) -> None:
+    if headless:
+        if sys.platform != "linux":
+            raise RuntimeError(
+                "Headless mode uses Xvfb and is only supported on Linux."
+            )
+        if shutil.which("xvfb-run") is None:
+            raise RuntimeError(
+                "headless=True requires xvfb-run on PATH. Install with: sudo apt install xvfb"
+            )
+        return
+    if sys.platform == "linux":
+        display = os.environ.get("DISPLAY")
+        wayland = os.environ.get("WAYLAND_DISPLAY")
+        if not display and not wayland:
+            raise RuntimeError(
+                "No DISPLAY or WAYLAND_DISPLAY is set. Re-run with --headless "
+                "(requires xvfb: sudo apt install xvfb) or run under a graphical session."
+            )
 
 
 class MinecraftEnv(gym.Env):
@@ -92,13 +135,16 @@ class MinecraftEnv(gym.Env):
         ):
             return  # already running
 
+        validate_minecraft_launch(headless=self.env_config.headless)
+        argv = minecraft_launch_argv(headless=self.env_config.headless)
+        env = minecraft_launch_env(software_gl=self.env_config.software_gl)
         self._minecraft_process = await asyncio.create_subprocess_exec(
-            "gradle",
-            "runClient",
+            *argv,
             cwd=Path.cwd() / "forge",
             stdout=asyncio.subprocess.DEVNULL,
             stderr=asyncio.subprocess.DEVNULL,
             start_new_session=True,
+            env=env,
         )
 
     def reset(

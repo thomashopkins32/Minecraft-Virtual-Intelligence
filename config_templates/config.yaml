@@ -5,6 +5,8 @@
 engine:
   image_size: [160, 256]
   max_steps: 10000
+  headless: false
+  software_gl: false
 
 # Agent settings
 agent:

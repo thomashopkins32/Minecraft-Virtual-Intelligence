@@ -1,7 +1,15 @@
+import shutil
+
 import numpy as np
+import pytest
 
 from mineagent.client.protocol import GLFW, KEY_TO_INDEX, NUM_KEYS, MSG_TYPE_ACTION
-from mineagent.env import MinecraftEnv
+from mineagent.env import (
+    MinecraftEnv,
+    minecraft_launch_argv,
+    minecraft_launch_env,
+    validate_minecraft_launch,
+)
 
 
 def _action(
@@ -64,3 +72,49 @@ def test_action_to_message_mouse_and_buttons():
     assert hold_click.has_buttons is False
     assert hold_click.has_mouse is False
     assert hold_click.has_scroll is False
+
+
+def test_minecraft_launch_argv_headed():
+    assert minecraft_launch_argv(headless=False) == ["gradle", "runClient"]
+
+
+def test_minecraft_launch_argv_headless():
+    assert minecraft_launch_argv(headless=True) == [
+        "xvfb-run",
+        "-a",
+        "-s",
+        "-screen 0 1920x1080x24",
+        "gradle",
+        "runClient",
+    ]
+
+
+def test_minecraft_launch_env_software_gl_off(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.delenv("LIBGL_ALWAYS_SOFTWARE", raising=False)
+    env = minecraft_launch_env(software_gl=False)
+    assert "LIBGL_ALWAYS_SOFTWARE" not in env
+
+
+def test_minecraft_launch_env_software_gl_on(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.delenv("LIBGL_ALWAYS_SOFTWARE", raising=False)
+    env = minecraft_launch_env(software_gl=True)
+    assert env["LIBGL_ALWAYS_SOFTWARE"] == "1"
+
+
+def test_validate_headless_requires_xvfb_run(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setattr(shutil, "which", lambda _: None)
+    with pytest.raises(RuntimeError, match="xvfb-run on PATH"):
+        validate_minecraft_launch(headless=True)
+
+
+def test_validate_headed_requires_display(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.delenv("DISPLAY", raising=False)
+    monkeypatch.delenv("WAYLAND_DISPLAY", raising=False)
+    with pytest.raises(RuntimeError, match="No DISPLAY or WAYLAND_DISPLAY"):
+        validate_minecraft_launch(headless=False)
+
+
+def test_validate_headed_with_display(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("DISPLAY", ":0")
+    monkeypatch.delenv("WAYLAND_DISPLAY", raising=False)
+    validate_minecraft_launch(headless=False)
