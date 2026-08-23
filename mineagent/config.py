@@ -18,10 +18,16 @@ class EngineConfig:
         Height and width for Minecraft rendered images
     max_steps : int, optional
         Total number of environment steps before program termination
+    headless : bool, optional
+        Run the Forge client under Xvfb (no physical display)
+    software_gl : bool, optional
+        Force Mesa software OpenGL (LIBGL_ALWAYS_SOFTWARE=1)
     """
 
     image_size: tuple[int, int] = (240, 320)
     max_steps: int = 10_000
+    headless: bool = False
+    software_gl: bool = False
 
 
 @dataclass
@@ -145,6 +151,10 @@ def get_config() -> Config:
         config = Config()
     if arguments.key_value_pairs is not None:
         update_config(config, arguments.key_value_pairs)
+    if arguments.headless:
+        config.engine.headless = True
+    if arguments.software_gl:
+        config.engine.software_gl = True
     return config
 
 
@@ -167,6 +177,17 @@ def parse_arguments() -> argparse.Namespace:
         help="Key-value pairs to override in the configuration (nested configs can be accessed via '.')",
         required=False,
         default=None,
+    )
+    parser.add_argument(
+        "--headless",
+        action="store_true",
+        help="Run the Forge client under Xvfb (no physical display). Linux only; requires xvfb-run on PATH.",
+    )
+    parser.add_argument(
+        "--software-gl",
+        action="store_true",
+        dest="software_gl",
+        help="Force Mesa software OpenGL (LIBGL_ALWAYS_SOFTWARE=1). Use on machines without a GPU.",
     )
     return parser.parse_args()
 

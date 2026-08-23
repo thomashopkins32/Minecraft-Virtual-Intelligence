@@ -70,6 +70,34 @@ This will start the project from the `mineagent.run:run` function.
 
 To view a list of all the commands you can use, run `mineagent --help`.
 
+### Headless vs display
+
+The Forge client always needs a real GLFW window. On a desktop: `pixi run mineagent`. No display: install `xvfb` and use `--headless` (add `--software-gl` if there is no GPU). Missing `DISPLAY` without `--headless` errors immediately.
+
+```bash
+pixi run mineagent --headless --software-gl
+pixi run gradle-run-client            # client, with display
+pixi run gradle-run-client-headless   # client, Xvfb
+```
+
+### Hyprland
+
+Tiling fights Minecraft's resize. Float the window; do not set `size` / `min_size` / `max_size`. Reload config, then restart the client.
+
+```lua
+hl.window_rule({
+  name = "mineagent-minecraft",
+  match = { class = "^Minecraft.*" },
+  float = true,
+  center = true,
+  no_anim = true,
+  no_max_size = true,
+  suppress_event = "maximize fullscreen",
+})
+```
+
+`hyprctl clients` should show `class: Minecraft* 1.21.5` and `floating: 1`.
+
 ## Technologies
 
 - [PyTorch](https://pytorch.org/)

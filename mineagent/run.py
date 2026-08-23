@@ -19,6 +19,8 @@ def run() -> None:
     env_config = MinecraftEnvConfig(
         frame_height=engine_config.image_size[0],
         frame_width=engine_config.image_size[1],
+        headless=engine_config.headless,
+        software_gl=engine_config.software_gl,
     )
     env = MinecraftEnv(env_config=env_config)
     agent = AgentV1(config.agent)
@@ -56,6 +58,8 @@ def debug() -> None:
     env_config = MinecraftEnvConfig(
         frame_height=engine_config.image_size[0],
         frame_width=engine_config.image_size[1],
+        headless=engine_config.headless,
+        software_gl=engine_config.software_gl,
     )
     env = MinecraftEnv(env_config=env_config)
     try:
