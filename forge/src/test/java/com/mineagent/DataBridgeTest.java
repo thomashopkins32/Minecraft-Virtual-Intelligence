@@ -32,12 +32,32 @@ class DataBridgeTest {
   void setLatestAction_andGetLatestAction_getAndSetBehavior() {
     ActionMessage input1 =
         new ActionMessage(
-            ActionMessage.MSG_TYPE_ACTION, new int[] {65}, new int[0], false, 0f, 0f,
-            false, 0, 0, false, 0f, "");
+            ActionMessage.MSG_TYPE_ACTION,
+            new int[] {65},
+            new int[0],
+            false,
+            0f,
+            0f,
+            false,
+            0,
+            0,
+            false,
+            0f,
+            "");
     ActionMessage input2 =
         new ActionMessage(
-            ActionMessage.MSG_TYPE_ACTION, new int[] {66}, new int[0], false, 0f, 0f,
-            false, 0, 0, false, 0f, "");
+            ActionMessage.MSG_TYPE_ACTION,
+            new int[] {66},
+            new int[0],
+            false,
+            0f,
+            0f,
+            false,
+            0,
+            0,
+            false,
+            0f,
+            "");
 
     // Set first input
     dataBridge.setLatestAction(input1);
@@ -65,8 +85,18 @@ class DataBridgeTest {
     // Set action
     ActionMessage input =
         new ActionMessage(
-            ActionMessage.MSG_TYPE_ACTION, new int[] {65, 66}, new int[0], true, 10.0f,
-            20.0f, true, 1, 0, true, 5.0f, "hello");
+            ActionMessage.MSG_TYPE_ACTION,
+            new int[] {65, 66},
+            new int[0],
+            true,
+            10.0f,
+            20.0f,
+            true,
+            1,
+            0,
+            true,
+            5.0f,
+            "hello");
     dataBridge.setLatestAction(input);
 
     // Get action

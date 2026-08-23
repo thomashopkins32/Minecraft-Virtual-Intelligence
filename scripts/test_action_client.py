@@ -88,7 +88,9 @@ class ActionTestClient:
 class ObservationTestClient:
     """Test client for receiving observations from the Minecraft mod."""
 
-    def __init__(self, observation_socket_path: str = "/tmp/mineagent_observation.sock"):
+    def __init__(
+        self, observation_socket_path: str = "/tmp/mineagent_observation.sock"
+    ):
         self.observation_socket_path = observation_socket_path
         self.observation_socket: Optional[socket.socket] = None
         self.connected = False
@@ -132,7 +134,9 @@ class ObservationTestClient:
                 if not self._read_exact(frame_length):
                     break
                 count += 1
-                print(f"✓ Observation #{count}: reward={reward:.3f}, frame={frame_length} bytes")
+                print(
+                    f"✓ Observation #{count}: reward={reward:.3f}, frame={frame_length} bytes"
+                )
         except Exception as e:
             print(f"✗ Error receiving observations: {e}")
 
@@ -195,9 +199,7 @@ def show_help():
     print("=" * 70)
 
 
-def run_command(
-    line: str, client: ActionTestClient, held: HeldState
-) -> Optional[bool]:
+def run_command(line: str, client: ActionTestClient, held: HeldState) -> Optional[bool]:
     """Execute one command line. Returns False to exit, None otherwise."""
     parts = line.strip().split()
     if not parts:
@@ -227,8 +229,11 @@ def run_command(
         bp, br = _button_edges(prev_buttons, held.mouse_buttons)
         client.send(
             ActionMessage(
-                key_press=kp, key_release=kr, has_buttons=True,
-                button_press=bp, button_release=br,
+                key_press=kp,
+                key_release=kr,
+                has_buttons=True,
+                button_press=bp,
+                button_release=br,
             )
         )
         return None
@@ -275,9 +280,7 @@ def run_command(
         prev_buttons = held.mouse_buttons
         held.set_mouse_button(button, pressed)
         bp, br = _button_edges(prev_buttons, held.mouse_buttons)
-        client.send(
-            ActionMessage(has_buttons=True, button_press=bp, button_release=br)
-        )
+        client.send(ActionMessage(has_buttons=True, button_press=bp, button_release=br))
         return None
 
     # Momentary mouse click: press, sleep, release.
@@ -436,7 +439,9 @@ def run_interactive_mode():
 
 def main():
     parser = argparse.ArgumentParser(description="MineAgent Action Test Client")
-    parser.add_argument("--auto", action="store_true", help="Run automated test sequence")
+    parser.add_argument(
+        "--auto", action="store_true", help="Run automated test sequence"
+    )
     parser.add_argument("--action-socket", default="/tmp/mineagent_action.sock")
     parser.add_argument("--obs-socket", default="/tmp/mineagent_observation.sock")
     args = parser.parse_args()

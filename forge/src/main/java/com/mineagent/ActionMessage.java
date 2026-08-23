@@ -10,22 +10,21 @@ import java.nio.charset.StandardCharsets;
  * <p>Wire format (big-endian):
  *
  * <ul>
- *   <li>1 byte flags:
- *       bits 0-1 = message type (ACTION / RESET / TEXT / PING), bit 2 = has key events,
- *       bit 3 = has mouse move, bit 4 = has button events, bit 5 = has scroll,
- *       bits 6-7 reserved (must be 0).
+ *   <li>1 byte flags: bits 0-1 = message type (ACTION / RESET / TEXT / PING), bit 2 = has key
+ *       events, bit 3 = has mouse move, bit 4 = has button events, bit 5 = has scroll, bits 6-7
+ *       reserved (must be 0).
  *   <li>key events (if bit 2): u8 numPress, u8 numRelease, numPress x i16 key codes to PRESS,
  *       numRelease x i16 key codes to RELEASE. Keys in neither list are HOLD.
  *   <li>mouse move (if bit 3): f32 dx, f32 dy.
- *   <li>button events (if bit 4): 1 byte, low 3 bits = buttons to PRESS, next 3 bits = buttons
- *       to RELEASE. Buttons in neither nibble are HOLD. Bit 0 = left, 1 = right, 2 = middle.
+ *   <li>button events (if bit 4): 1 byte, low 3 bits = buttons to PRESS, next 3 bits = buttons to
+ *       RELEASE. Buttons in neither nibble are HOLD. Bit 0 = left, 1 = right, 2 = middle.
  *   <li>scroll (if bit 5): f32 delta.
  *   <li>TEXT body: u16 UTF-8 length + bytes.
  *   <li>RESET / PING: no body.
  * </ul>
  *
- * <p>Java maintains the held key/button state across messages; PRESS adds, RELEASE removes,
- * and HOLD (unlisted) leaves state unchanged.
+ * <p>Java maintains the held key/button state across messages; PRESS adds, RELEASE removes, and
+ * HOLD (unlisted) leaves state unchanged.
  */
 public record ActionMessage(
     int msgType,
@@ -73,8 +72,7 @@ public record ActionMessage(
   public static ActionMessage read(ByteBuffer buffer) {
     int flags = buffer.get() & 0xFF;
     if ((flags & FLAG_MASK_RESERVED) != 0) {
-      throw new IllegalArgumentException(
-          "Reserved flag bits set: " + Integer.toHexString(flags));
+      throw new IllegalArgumentException("Reserved flag bits set: " + Integer.toHexString(flags));
     }
     int msgType = flags & 0x3;
 
@@ -105,8 +103,7 @@ public record ActionMessage(
         for (int p : keyPress) {
           for (int r : keyRelease) {
             if (p == r) {
-              throw new IllegalArgumentException(
-                  "key in both press and release lists: " + p);
+              throw new IllegalArgumentException("key in both press and release lists: " + p);
             }
           }
         }
@@ -119,8 +116,7 @@ public record ActionMessage(
       if ((flags & FLAG_HAS_BUTTONS) != 0) {
         int b = buffer.get() & 0xFF;
         if ((b & FLAG_MASK_RESERVED) != 0) {
-          throw new IllegalArgumentException(
-              "Reserved button bits set: " + Integer.toHexString(b));
+          throw new IllegalArgumentException("Reserved button bits set: " + Integer.toHexString(b));
         }
         buttonPress = b & 0x7;
         buttonRelease = (b >> 3) & 0x7;

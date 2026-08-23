@@ -78,8 +78,7 @@ class ActionMessageTest {
 
   private byte[] buildTextBytes(String text) {
     byte[] textBytes = text.getBytes(StandardCharsets.UTF_8);
-    ByteBuffer buffer =
-        ByteBuffer.allocate(1 + 2 + textBytes.length).order(ByteOrder.BIG_ENDIAN);
+    ByteBuffer buffer = ByteBuffer.allocate(1 + 2 + textBytes.length).order(ByteOrder.BIG_ENDIAN);
     buffer.put((byte) ActionMessage.MSG_TYPE_TEXT);
     buffer.putShort((short) textBytes.length);
     buffer.put(textBytes);
@@ -116,8 +115,7 @@ class ActionMessageTest {
   @Test
   void lookOnly_isNineBytes() {
     byte[] bytes =
-        buildActionBytes(
-            new int[0], new int[0], true, 1.5f, -2.25f, false, 0, 0, false, 0f);
+        buildActionBytes(new int[0], new int[0], true, 1.5f, -2.25f, false, 0, 0, false, 0f);
     assertEquals(9, bytes.length);
     ActionMessage msg = ActionMessage.fromBytes(bytes);
     assertTrue(msg.hasMouse());
@@ -128,8 +126,7 @@ class ActionMessageTest {
   @Test
   void pressW_isFiveBytes() {
     byte[] bytes =
-        buildActionBytes(
-            new int[] {KEY_W}, new int[0], false, 0f, 0f, false, 0, 0, false, 0f);
+        buildActionBytes(new int[] {KEY_W}, new int[0], false, 0f, 0f, false, 0, 0, false, 0f);
     assertEquals(5, bytes.length);
     ActionMessage msg = ActionMessage.fromBytes(bytes);
     assertArrayEquals(new int[] {KEY_W}, msg.keyPress());
@@ -139,8 +136,7 @@ class ActionMessageTest {
   @Test
   void releaseLeftAndScroll() {
     byte[] bytes =
-        buildActionBytes(
-            new int[0], new int[0], false, 0f, 0f, true, 0, 0b001, true, -1.0f);
+        buildActionBytes(new int[0], new int[0], false, 0f, 0f, true, 0, 0b001, true, -1.0f);
     assertEquals(6, bytes.length);
     ActionMessage msg = ActionMessage.fromBytes(bytes);
     assertTrue(msg.hasButtons());
@@ -153,8 +149,7 @@ class ActionMessageTest {
   @Test
   void buttonBytePacksPressAndReleaseNibbles() {
     byte[] bytes =
-        buildActionBytes(
-            new int[0], new int[0], false, 0f, 0f, true, 0b001, 0b100, false, 0f);
+        buildActionBytes(new int[0], new int[0], false, 0f, 0f, true, 0b001, 0b100, false, 0f);
     ActionMessage msg = ActionMessage.fromBytes(bytes);
     assertEquals(0b001, msg.buttonPress());
     assertEquals(0b100, msg.buttonRelease());
@@ -164,8 +159,7 @@ class ActionMessageTest {
   void keysPressAndReleaseLists() {
     byte[] bytes =
         buildActionBytes(
-            new int[] {KEY_W, KEY_SPACE}, new int[] {KEY_A}, false, 0f, 0f, false, 0, 0,
-            false, 0f);
+            new int[] {KEY_W, KEY_SPACE}, new int[] {KEY_A}, false, 0f, 0f, false, 0, 0, false, 0f);
     ActionMessage msg = ActionMessage.fromBytes(bytes);
     assertArrayEquals(new int[] {KEY_W, KEY_SPACE}, msg.keyPress());
     assertArrayEquals(new int[] {KEY_A}, msg.keyRelease());
@@ -177,8 +171,16 @@ class ActionMessageTest {
   void roundTrip_fullAction() {
     byte[] bytes =
         buildActionBytes(
-            new int[] {KEY_W, KEY_S}, new int[] {KEY_A}, true, 12.5f, -7.25f, true,
-            0b010, 0b001, true, 2.5f);
+            new int[] {KEY_W, KEY_S},
+            new int[] {KEY_A},
+            true,
+            12.5f,
+            -7.25f,
+            true,
+            0b010,
+            0b001,
+            true,
+            2.5f);
     ActionMessage msg = ActionMessage.fromBytes(bytes);
     assertArrayEquals(new int[] {KEY_W, KEY_S}, msg.keyPress());
     assertArrayEquals(new int[] {KEY_A}, msg.keyRelease());
@@ -203,8 +205,7 @@ class ActionMessageTest {
   @Test
   void fromBytes_rejectsReservedBits() {
     assertThrows(
-        IllegalArgumentException.class,
-        () -> ActionMessage.fromBytes(new byte[] {(byte) 0xC0}));
+        IllegalArgumentException.class, () -> ActionMessage.fromBytes(new byte[] {(byte) 0xC0}));
   }
 
   @Test

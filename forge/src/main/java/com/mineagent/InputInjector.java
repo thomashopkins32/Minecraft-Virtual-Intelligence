@@ -48,7 +48,10 @@ public class InputInjector {
   private double virtualMouseY = 0.0;
   private boolean mouseInitialized = false;
 
-  /** Injects an {@link ActionMessage} by applying its edges in order: keys, mouse, buttons, scroll, text. */
+  /**
+   * Injects an {@link ActionMessage} by applying its edges in order: keys, mouse, buttons, scroll,
+   * text.
+   */
   public void inject(ActionMessage message) {
     Minecraft mc = Minecraft.getInstance();
     if (mc == null || mc.getWindow() == null) {
@@ -99,7 +102,9 @@ public class InputInjector {
     currentModifiers = computeModifiers(findModifierKeys(heldKeys));
   }
 
-  /** Releases a key: fires GLFW_RELEASE for previously-held keys, updates held state and modifiers. */
+  /**
+   * Releases a key: fires GLFW_RELEASE for previously-held keys, updates held state and modifiers.
+   */
   private void releaseKey(Minecraft mc, long window, int keyCode) {
     if (!heldKeys.contains(keyCode)) {
       return; // not held -> nothing to release
